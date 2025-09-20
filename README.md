@@ -1,52 +1,53 @@
-# INSY7314 - MERN Secure Payments Scaffold
+# INSY7314 - Backend (MERN Secure Payments API)
 
 ## Overview
+This is the backend API for the INSY7314 secure Customer International Payments Portal.
 
+- **Technology:** Node.js + Express + MongoDB
+- **Authentication:** JWT-based
+- **Security:** Password hashing (bcrypt), input validation
+- **Roles:** Customer & Employee
 
+It handles user management, payments, and employee verification workflows.
 
 ---
 
 ## Features Implemented (✅)
 
 ### Backend
-
-
-### Frontend
-
+- User registration and login (Customer & Employee)
+- JWT authentication middleware
+- Role-based authorization
+- Create and view payments (Customer)
+- Pending payments and verification (Employee)
+- Input validation using regex
 
 ### Database / Architecture
-✅
+- MongoDB with Mongoose
+- MERN stack compatible
+- Role-based access control
 
 ---
 
-## Features to Implement (⬜)
+## Routes / API Endpoints
 
-### Backend Security Enhancements
+### Auth
+- `POST /auth/register` – Register a new user  
+- `POST /auth/login` – Login and receive JWT
 
-
-
+### Customer Payments
+- `POST /payments` – Create a payment (requires Customer JWT)  
+- `GET /payments/me` – List my payments (requires Customer JWT)
 
 ### Employee Workflows
-
-
----
-
-## Pages / Routes
-
-
+- `GET /payments/pending` – List pending payments (requires Employee JWT)  
+- `POST /payments/:id/verify` – Verify a payment (requires Employee JWT)
 
 ---
 
 ## Installation
 
-### Backend
+1. Clone the repository:
 ```bash
+git clone <repo-url>
 cd backend
-npm install
-npm run dev
-
-
-
-The backend runs on port 4000 by default.
-
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/pdkbmFLV)
