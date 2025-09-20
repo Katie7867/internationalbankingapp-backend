@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - '4000:4000'
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/insy7314_compose
+  mongo:
+    image: mongo:6
+    volumes:
+      - mongo-data:/data/db
+volumes:
+  mongo-data:
