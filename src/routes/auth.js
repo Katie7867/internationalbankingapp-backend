@@ -1,6 +1,11 @@
 const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const helmet = require('helmet')
+const rateLimit = require('express-rate-limit')
+const xss = require('xss-clean')
+const mongoSanitize = require('express-mongo-sanitize')
+
 const User = require('../models/User')
 const { patterns } = require('../validators')
 
@@ -8,9 +13,23 @@ const router = express.Router()
 const SALT_ROUNDS = 12
 
 // -------------------------
+// SECURITY MIDDLEWARE
+// -------------------------
+router.use(helmet())              // Secure HTTP headers
+router.use(xss())                 // Prevent XSS attacks
+router.use(mongoSanitize())       // Prevent NoSQL injection
+
+// Limit requests to 5 per minute for auth routes
+const authLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5,
+  message: { error: 'Too many attempts, please try again later.' }
+})
+
+// -------------------------
 // REGISTER
 // -------------------------
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { fullName, idNumber, accountNumber, username, password, role } = req.body
 
@@ -53,7 +72,7 @@ router.post('/register', async (req, res) => {
 // -------------------------
 // LOGIN
 // -------------------------
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body
     const user = await User.findOne({ username })

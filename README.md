@@ -51,3 +51,4 @@ It handles user management, payments, and employee verification workflows.
 ```bash
 git clone <repo-url>
 cd backend
+npm run dev 

@@ -1,16 +1,14 @@
-// routes/payment.js
+// routes/payments.js
 const express = require('express')
 const Payment = require('../models/Payment')
-const { auth } = require('../middleware/auth') // <-- import actual function
+const { auth } = require('../middleware/auth')
 const { patterns } = require('../validators')
 
 const router = express.Router()
 
 // -------------------------
-// CUSTOMER ROUTES
+// ROLE CHECK
 // -------------------------
-
-// Role-based middleware for single role
 function requireRole(role) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'unauthorized' })
@@ -19,8 +17,12 @@ function requireRole(role) {
   }
 }
 
-// Create payment (customer)
-router.post('/', auth, requireRole('customer'), async (req, res) => {
+// -------------------------
+// CUSTOMER ROUTES
+// -------------------------
+
+// Create payment
+router.post('/', auth, requireRole('customer'), async (req, res, next) => {
   try {
     const { amount, currency, provider, payeeAccount, swift } = req.body
 
@@ -33,11 +35,15 @@ router.post('/', auth, requireRole('customer'), async (req, res) => {
       return res.status(400).json({ error: 'validation failed' })
     }
 
+    if (!['USD', 'EUR', 'ZAR'].includes(currency)) {
+      return res.status(400).json({ error: 'unsupported currency' })
+    }
+
     const payment = await Payment.create({
       customerId: req.user.sub,
       amount: Number(amount),
       currency,
-      provider,
+      provider: provider || 'SWIFT',
       payeeAccount,
       swift
     })
@@ -56,19 +62,17 @@ router.post('/', auth, requireRole('customer'), async (req, res) => {
       }
     })
   } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: 'server error' })
+    next(e)
   }
 })
 
-// Get my payments (customer)
-router.get('/me', auth, requireRole('customer'), async (req, res) => {
+// Get my payments
+router.get('/me', auth, requireRole('customer'), async (req, res, next) => {
   try {
     const payments = await Payment.find({ customerId: req.user.sub }).sort({ createdAt: -1 })
     res.json(payments)
   } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: 'server error' })
+    next(e)
   }
 })
 
@@ -76,21 +80,20 @@ router.get('/me', auth, requireRole('customer'), async (req, res) => {
 // EMPLOYEE ROUTES
 // -------------------------
 
-// Get pending payments (employee)
-router.get('/pending', auth, requireRole('employee'), async (req, res) => {
+// Get pending payments
+router.get('/pending', auth, requireRole('employee'), async (req, res, next) => {
   try {
     const payments = await Payment.find({ status: 'pending' })
       .populate('customerId', 'fullName accountNumber username')
       .limit(200)
     res.json(payments)
   } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: 'server error' })
+    next(e)
   }
 })
 
-// Verify payment (employee)
-router.post('/:id/verify', auth, requireRole('employee'), async (req, res) => {
+// Verify payment
+router.post('/:id/verify', auth, requireRole('employee'), async (req, res, next) => {
   try {
     const payment = await Payment.findById(req.params.id)
     if (!payment) return res.status(404).json({ error: 'not found' })
@@ -98,11 +101,28 @@ router.post('/:id/verify', auth, requireRole('employee'), async (req, res) => {
     payment.status = 'verified'
     await payment.save()
 
-    // Placeholder: send to SWIFT system (out of scope)
-    res.json({ ok: true })
+    res.json({ ok: true, payment })
   } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: 'server error' })
+    next(e)
+  }
+})
+
+// Send payment
+router.post('/:id/send', auth, requireRole('employee'), async (req, res, next) => {
+  try {
+    const payment = await Payment.findById(req.params.id)
+    if (!payment) return res.status(404).json({ error: 'not found' })
+
+    if (payment.status !== 'verified') {
+      return res.status(400).json({ error: 'payment must be verified first' })
+    }
+
+    payment.status = 'sent'
+    await payment.save()
+
+    res.json({ ok: true, payment })
+  } catch (e) {
+    next(e)
   }
 })
 
