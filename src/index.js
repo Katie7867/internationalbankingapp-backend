@@ -6,7 +6,7 @@ const cors = require('cors')
 const mongoose = require('mongoose')
 
 const authRoutes = require('./routes/auth')
-const paymentRoutes = require('./routes/payments')
+const paymentsRouter = require('./routes/payments');
 
 const app = express()
 
@@ -24,14 +24,14 @@ app.use(limiter)
 // -----------------------------
 const MONGO_URI = process.env.MONGO_URI
 if (!MONGO_URI) {
-  console.error("❌ MONGO_URI not set in .env")
+  console.error("MONGO_URI not set in .env")
   process.exit(1)
 }
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected successfully"))
+  .then(() => console.log("MongoDB connected successfully"))
   .catch(err => {
-    console.error("❌ MongoDB connection error:", err)
+    console.error("MongoDB connection error:", err)
     process.exit(1)
   })
 
@@ -39,7 +39,7 @@ mongoose.connect(MONGO_URI)
 // Routes
 // -----------------------------
 app.use('/api/auth', authRoutes)
-app.use('/api/payments', paymentRoutes)
+app.use('/api/payments', paymentsRouter);
 
 app.get('/', (req, res) =>
   res.json({ ok: true, message: 'INSY7314 backend running' })

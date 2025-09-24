@@ -7,7 +7,7 @@ const xss = require('xss-clean')
 const mongoSanitize = require('express-mongo-sanitize')
 
 const User = require('../models/User')
-const { patterns } = require('../validators')
+const { patterns } = require('../validation/authValidation')
 
 const router = express.Router()
 const SALT_ROUNDS = 12

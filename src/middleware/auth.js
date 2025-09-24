@@ -15,8 +15,14 @@ function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret')
-    req.user = decoded
+    const userId = decoded.id || decoded._id || decoded.userId || decoded.sub
+    if (!userId) {
+      return res.status(401).json({ error: 'invalid token: no user id claim' })
+    }
+
+    req.user = { ...decoded, id: userId }  
     next()
+    
   } catch (err) {
     return res.status(401).json({ error: 'invalid or expired token' })
   }

@@ -1,0 +1,43 @@
+const { Payment } = require('../models/Payment');
+const { createPaymentSchema } = require('../validation/paymentValidation');
+
+exports.createPayment = async (req, res, next) => {
+  try {
+    const { value, error } = createPaymentSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        details: error.details.map(d => d.message)
+      });
+    }
+
+    // Normalize
+    value.currency = String(value.currency).toUpperCase().trim();
+    value.payeeSwift = String(value.payeeSwift).toUpperCase().replace(/\s+/g, '');
+    value.payeeAccountNumber = String(value.payeeAccountNumber).replace(/\s+/g, '');
+    value.payeeName = String(value.payeeName).trim();
+    if (value.reference) value.reference = String(value.reference).trim();
+
+    const payment = await Payment.create({
+      customerId: req.user.id,       
+      ...value,
+      status: 'submitted',
+      submittedAt: new Date()
+    });
+
+    return res.status(201).json({ message: 'Payment created', payment });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.listMyPayments = async (req, res, next) => {
+  try {
+    const payments = await Payment.find({ customerId: req.user.id })
+      .sort({ createdAt: -1 })
+      .select('-__v');
+    res.json({ payments });
+  } catch (err) {
+    next(err);
+  }
+};
