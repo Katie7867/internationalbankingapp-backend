@@ -46,7 +46,7 @@ router.post('/register', authLimiter, async (req, res) => {
     // Check if user or account exists
     const existing = await User.findOne({ $or: [{ username }, { accountNumber }] })
     if (existing) return res.status(400).json({ error: 'User or account exists' })
-
+      
     // Hash password
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
 
@@ -74,13 +74,27 @@ router.post('/register', authLimiter, async (req, res) => {
 // -------------------------
 router.post('/login', authLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body
-    const user = await User.findOne({ username })
+    const { username, password, accountNumber } = req.body
+
+    //check that all fields are present
+    if (!username || !password || !accountNumber) {
+      return res.status(400).json({ error: 'All fields are required' })
+    }
+
+    //validate account number format using regex
+    if (!patterns.accountNumber.test(accountNumber)) {
+      return res.status(400).json({ error: 'Invalid account number format' })
+    }
+
+    //find user by BOTH username + accountNumber
+    const user = await User.findOne({ username, accountNumber })
     if (!user) return res.status(401).json({ error: 'invalid credentials' })
 
+    //compare password hash
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) return res.status(401).json({ error: 'invalid credentials' })
 
+    //generate token
     const token = jwt.sign(
       { sub: user._id, role: user.role },
       process.env.JWT_SECRET || 'devsecret',
