@@ -15,8 +15,8 @@ exports.createPaymentSchema = Joi.object({
   currency: currencyCode.required(),
   provider: Joi.string().valid('SWIFT').required(),
   payeeName: Joi.string().min(2).max(120).required(),
-  payeeAccountNumber: Joi.string().pattern(/^[A-Z0-9\-\s]{6,34}$/i).required(),
+  payeeAccountNumber: Joi.string().pattern(/^\d{8,12}$/).required(),
   payeeSwift: Joi.string().uppercase().pattern(bicRegex).required(),
 
-  reference: Joi.string().max(35).allow('', null)
+  reference: Joi.string().max(20).allow('', null)
 })

@@ -11,12 +11,12 @@ const paymentSchema = new mongoose.Schema(
     payeeAccountNumber: { type: String, required: true, trim: true },
     payeeSwift: { type: String, required: true, uppercase: true, trim: true }, 
 
-    reference: { type: String, trim: true, maxlength: 35 }, 
+    reference: { type: String, trim: true, maxlength: 20 }, 
 
     status: {
       type: String,
-      enum: ['submitted','pending_verification','verified','sent_to_swift','failed','cancelled'],
-      default: 'submitted',
+      enum: ['pending','sent_to_swift','rejected'],
+      default: 'pending',
       index: true
     },
     submittedAt: { type: Date, default: Date.now }

@@ -21,7 +21,7 @@ exports.createPayment = async (req, res, next) => {
     const payment = await Payment.create({
       customerId: req.user.id,       
       ...value,
-      status: 'submitted',
+      status: 'pending',
       submittedAt: new Date()
     });
 
@@ -37,6 +37,53 @@ exports.listMyPayments = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .select('-__v');
     res.json({ payments });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.listAllPayments = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'employee') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const payments = await Payment.find()
+      .sort({ createdAt: -1 })
+      .select('-__v');
+
+    res.json({ payments });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPaymentById = async (req, res, next) => {
+  try {
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    if (req.user.role !== 'employee' && payment.customerId.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    res.json({ payment });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updatePaymentStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!['sent_to_swift','rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    if (req.user.role !== 'employee') return res.status(403).json({ error: 'Unauthorized' });
+
+    payment.status = status;
+    await payment.save();
+    res.json({ message: 'Status updated', payment });
   } catch (err) {
     next(err);
   }
