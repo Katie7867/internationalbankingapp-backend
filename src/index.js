@@ -54,10 +54,18 @@ app.use((err, req, res, next) => {
 })
 
 // -----------------------------
-// Start Server
+// Start Server with HTTPS
 // -----------------------------
+const https = require('https');
+const fs = require('fs');
+
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`);
+const options = {
+  key: fs.readFileSync('ssl/key.pem'),   // make sure ssl/key.pem exists
+  cert: fs.readFileSync('ssl/cert.pem'),
+};
+
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Server running at https://localhost:${PORT}`);
 });

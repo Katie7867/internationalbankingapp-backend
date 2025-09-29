@@ -38,7 +38,8 @@ router.post('/register', authLimiter, async (req, res) => {
       !patterns.fullName.test(fullName) ||
       !patterns.idNumber.test(idNumber) ||
       !patterns.accountNumber.test(accountNumber) ||
-      !patterns.username.test(username)
+      !patterns.username.test(username) ||
+      !patterns.password.test(password)
     ) {
       return res.status(400).json({ error: 'validation failed' })
     }
@@ -76,25 +77,28 @@ router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password, accountNumber } = req.body
 
-    //check that all fields are present
-    if (!username || !password || !accountNumber) {
-      return res.status(400).json({ error: 'All fields are required' })
-    }
+    // Check required fields
+    if (!username) return res.status(400).json({ error: 'Username is required' })
+    if (!accountNumber) return res.status(400).json({ error: 'Account Number is required' })
+    if (!password) return res.status(400).json({ error: 'Password is required' })
 
-    //validate account number format using regex
-    if (!patterns.accountNumber.test(accountNumber)) {
-      return res.status(400).json({ error: 'Invalid account number format' })
-    }
+    // Validate formats
+    if (!patterns.username.test(username))
+      return res.status(400).json({ error: 'Username must be 4-30 letters, numbers, or _' })
+    if (!patterns.accountNumber.test(accountNumber))
+      return res.status(400).json({ error: 'Account Number must be 8-12 digits' })
+    if (!patterns.password.test(password))
+      return res.status(400).json({ error: 'Password must be at least 8 characters and include letters, numbers, and special characters' })
 
-    //find user by BOTH username + accountNumber
+    // Find user by username + accountNumber
     const user = await User.findOne({ username, accountNumber })
-    if (!user) return res.status(401).json({ error: 'invalid credentials' })
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
-    //compare password hash
+    // Compare password
     const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) return res.status(401).json({ error: 'invalid credentials' })
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
 
-    //generate token
+    // Generate token
     const token = jwt.sign(
       { sub: user._id, role: user.role },
       process.env.JWT_SECRET || 'devsecret',
@@ -104,8 +108,9 @@ router.post('/login', authLimiter, async (req, res) => {
     return res.json({ token, role: user.role })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'server error' })
+    res.status(500).json({ error: 'Server error' })
   }
 })
+
 
 module.exports = router
