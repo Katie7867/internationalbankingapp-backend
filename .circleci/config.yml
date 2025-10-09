@@ -1,0 +1,144 @@
+# .circleci/config.yml
+version: 2.1
+
+executors:
+  node_executor:
+    docker:
+      - image: cimg/node:22.0
+    resource_class: medium
+    working_directory: ~/project
+
+  base_docker:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    working_directory: ~/project
+
+commands:
+  restore_npm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-npm-{{ arch }}-{{ checksum "package-lock.json" }}
+            - v1-npm-{{ arch }}
+            - v1-npm-
+  save_npm_cache:
+    steps:
+      - save_cache:
+          key: v1-npm-{{ arch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+
+jobs:
+  lint_and_test:
+    executor: node_executor
+    steps:
+      - checkout
+      - restore_npm_cache
+      - run:
+          name: Install dependencies
+          command: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm i
+            fi
+      - save_npm_cache
+
+      - run:
+          name: Sanity check required env (only needed if your tests use them)
+          command: |
+            : "${MONGO_URI:=dummy}"
+            : "${JWT_SECRET:=dummy}"
+            echo "Env OK (dummy values allowed for unit tests that don't connect)."
+
+      - run:
+          name: Run ESLint
+          command: npm run lint
+
+      - run:
+          name: Run Jest
+          command: npm test -- --ci
+
+      - run:
+          name: Collect test results/coverage (if present)
+          when: always
+          command: |
+            mkdir -p test-results coverage || true
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: coverage
+          when: always
+
+  docker_build_and_healthcheck:
+    executor: base_docker
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run:
+          name: Build Docker image
+          command: |
+            IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
+            docker build -t "$IMAGE_NAME:$CIRCLE_SHA1" .
+
+      - run:
+          name: Run container and wait for health
+          command: |
+            : "${MONGO_URI:=mongodb://localhost:27017/dummy}"  # not used by /health, just present
+            : "${JWT_SECRET:=dummy}"
+            IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
+
+            docker run -d --name banking_api \
+              -p 5000:5000 \
+              -e NODE_ENV=production \
+              -e PORT=5000 \
+              -e USE_HTTPS=false \
+              -e MONGO_URI="$MONGO_URI" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              "$IMAGE_NAME:$CIRCLE_SHA1"
+
+            attempt=0
+            max_attempts=60
+            until [ $attempt -ge $max_attempts ]; do
+              status="$(docker inspect --format='{{.State.Health.Status}}' banking_api 2>/dev/null || echo 'unknown')"
+              if [ "$status" = "healthy" ]; then
+                echo "Healthy via Docker HEALTHCHECK."
+                exit 0
+              fi
+              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" http://localhost:5000/health || echo 000)"
+              echo "Attempt $((attempt+1))/$max_attempts — docker:$status http:$code"
+              if [ "$code" = "200" ]; then
+                echo "----- /health body -----"
+                tail -c 1000 /tmp/health.txt || true
+                echo
+                echo "Health check PASSED via HTTP"
+                exit 0
+              fi
+              attempt=$((attempt+1))
+              sleep 2
+            done
+
+            echo "Health check FAILED"
+            echo "---- Container logs ----"
+            docker logs --tail=300 banking_api || true
+            exit 1
+
+      - run:
+          name: Cleanup
+          when: always
+          command: docker rm -f banking_api || true
+
+workflows:
+  banking_pipeline:
+    jobs:
+      - lint_and_test
+      - docker_build_and_healthcheck:
+          requires:
+            - lint_and_test
+          filters:
+            branches:
+              only:
+                - main
+                - master

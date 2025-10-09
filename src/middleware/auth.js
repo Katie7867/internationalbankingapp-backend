@@ -33,7 +33,7 @@ function auth(req, res, next) {
 
     req.user = { ...decoded, id: userId };
     next();
-  } catch (err) {
+  } catch (_err) {
     return res.status(401).json({ error: 'invalid or expired token' });
   }
 }

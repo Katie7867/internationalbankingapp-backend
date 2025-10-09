@@ -55,7 +55,7 @@ router.post('/register', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Validation failed (client values do not match server regex)' });
     }
 
-    // collision check
+    //collision check
     const existing = await User.findOne({ $or: [{ username }, { accountNumber }] });
     if (existing) return res.status(400).json({ error: 'User or account already exists' });
 
@@ -74,7 +74,7 @@ router.post('/register', authLimiter, async (req, res) => {
   } catch (err) {
     console.error('REGISTER ERROR:', err);
 
-    // Common helpful error responses
+    //Common helpful error responses
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: 'Mongo validation error', details: err.message });
     }
@@ -226,7 +226,7 @@ router.get('/me', (req, res) => {
     // return only safe claims
     const user = { id: decoded.sub || decoded._id || decoded.userId, role: decoded.role || decoded.role };
     return res.json({ user });
-  } catch (err) {
+  } catch (_err) {
     return res.status(401).json({ error: 'invalid token' });
   }
 });
@@ -242,7 +242,7 @@ router.post('/logout', async (req, res) => {
         const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refreshsecret');
         const user = await User.findById(payload.sub);
         if (user) { user.refreshId = null; user.refreshExpires = null; await user.save(); }
-      } catch (_) { /* ignore */ }
+      } catch (_err) { /* ignore */ }
     }
     const secureFlag = process.env.NODE_ENV === 'production';
     res.clearCookie('access_token', { httpOnly: true, secure: secureFlag, sameSite: 'Strict' });
