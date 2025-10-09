@@ -5,10 +5,13 @@ const { createPaymentSchema } = require('../validation/paymentValidation');
 
 const normalizeStatus = (s) => (s === 'submitted' ? 'pending' : s);
 
+//validate user authentication and input before creating payment
 exports.createPayment = async (req, res, next) => {
   try {
+    //check user is authenticated to prevent unauthorized access
     if (!req.user || !req.user.id) return res.status(401).json({ error: 'unauthorized' });
 
+    //validate request body to mitigate malformed or malicious data
     const { value, error } = createPaymentSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
@@ -17,7 +20,7 @@ exports.createPayment = async (req, res, next) => {
       });
     }
 
-    // Normalize
+    //sanitize and normalize input data to prevent injection attacks
     value.currency = String(value.currency).toUpperCase().trim();
     value.payeeSwift = String(value.payeeSwift).toUpperCase().replace(/\s+/g, '');
     value.payeeAccountNumber = String(value.payeeAccountNumber).replace(/\s+/g, '');
@@ -44,15 +47,17 @@ exports.createPayment = async (req, res, next) => {
   }
 };
 
+//ensure users can only list their own payments
 exports.listMyPayments = async (req, res, next) => {
   try {
+    //check user is authenticated to enforce access control
     if (!req.user || !req.user.id) return res.status(401).json({ error: 'unauthorized' });
 
     const payments = await Payment.find({ customerId: req.user.id })
       .sort({ createdAt: -1 })
       .lean();
 
-    // normalize legacy statuses for client
+    //normalize legacy statuses for client
     const out = payments.map(p => ({
       ...p,
       status: normalizeStatus(p.status),
@@ -66,8 +71,10 @@ exports.listMyPayments = async (req, res, next) => {
   }
 };
 
+//restrict listing of all payments to authorized employees
 exports.listAllPayments = async (req, res, next) => {
   try {
+    //enforce role-based access control
     if (!req.user || req.user.role !== 'employee') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -99,17 +106,20 @@ exports.listAllPayments = async (req, res, next) => {
   }
 };
 
+//ensure user can only access payments they are authorized for
 exports.getPaymentById = async (req, res, next) => {
   try {
     const payment = await Payment.findById(req.params.id).lean();
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
 
+    //check user authentication
     if (!req.user) return res.status(401).json({ error: 'unauthorized' });
+    //check role-based access or ownership
     if (req.user.role !== 'employee' && String(payment.customerId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // populate customer info using User model
+    //populate customer info using User model safely
     let customer = null;
     if (payment.customerId) {
       customer = await User.findById(payment.customerId).select('username accountNumber fullName').lean();
@@ -130,11 +140,14 @@ exports.getPaymentById = async (req, res, next) => {
   }
 };
 
+//enforce role-based update for payment status changes
 exports.updatePaymentStatus = async (req, res, next) => {
   try {
+    //check that only authorized employees can update status
     if (!req.user || req.user.role !== 'employee') return res.status(403).json({ error: 'Unauthorized' });
 
     const { status } = req.body;
+    //validate status to prevent invalid data manipulation
     if (!['sent_to_swift', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }

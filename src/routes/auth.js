@@ -16,15 +16,17 @@ const SALT_ROUNDS = 12;
 // -------------------------
 // SECURITY MIDDLEWARE
 // -------------------------
+//protect headers, prevent XSS, and sanitize Mongo queries
 router.use(helmet());
 router.use(xss());
 router.use(mongoSanitize());
 
-// per-credential limiter (5 attempts per minute)
+//limit login/register attempts to prevent brute force attacks
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 5,
   keyGenerator: (req) => {
+    //limit per username/accountNumber combination
     const userKey = `${req.body.username || ''}:${req.body.accountNumber || ''}`.trim();
     return userKey || req.ip;
   },
@@ -34,17 +36,17 @@ const authLimiter = rateLimit({
 // -------------------------
 // REGISTER (customers only)
 // -------------------------
-// DEBUG-friendly register handler (temporary)
+//handle new user registration securely
 router.post('/register', authLimiter, async (req, res) => {
   try {
     const { fullName, idNumber, accountNumber, username, password } = req.body;
 
-    // basic checks for clearer early errors
+    //check all required fields are present
     if (!fullName || !idNumber || !accountNumber || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // validate with your patterns
+    //validate inputs against server-side patterns to prevent invalid data
     if (
       !patterns.fullName.test(fullName) ||
       !patterns.idNumber.test(idNumber) ||
@@ -55,10 +57,11 @@ router.post('/register', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Validation failed (client values do not match server regex)' });
     }
 
-    //collision check
+    //check for existing user to prevent duplicates
     const existing = await User.findOne({ $or: [{ username }, { accountNumber }] });
     if (existing) return res.status(400).json({ error: 'User or account already exists' });
 
+    //hash password securely before storing
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     const newUser = await User.create({
@@ -74,17 +77,16 @@ router.post('/register', authLimiter, async (req, res) => {
   } catch (err) {
     console.error('REGISTER ERROR:', err);
 
-    //Common helpful error responses
+    //handle validation errors securely
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: 'Mongo validation error', details: err.message });
     }
     if (err.code === 11000) {
-      // duplicate key
       const dupField = Object.keys(err.keyValue || {}).join(', ');
       return res.status(400).json({ error: `Duplicate field: ${dupField}` });
     }
 
-    // fallback: reveal message while debugging — remove in production
+    //fallback error message (avoid revealing sensitive info in production)
     return res.status(500).json({ error: 'server error', message: err.message });
   }
 });
@@ -92,25 +94,29 @@ router.post('/register', authLimiter, async (req, res) => {
 // -------------------------
 // LOGIN
 // -------------------------
+//authenticate users securely
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password, accountNumber } = req.body;
 
+    //check all required fields
     if (!username || !password || !accountNumber) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
+    //validate account number format
     if (!patterns.accountNumber.test(accountNumber)) {
       return res.status(400).json({ error: 'Invalid account number format' });
     }
 
+    //find user and verify password
     const user = await User.findOne({ username, accountNumber });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // rotate and persist refreshId (server-side)
+    //rotate refresh token for session security
     const refreshId = crypto.randomBytes(32).toString('hex');
     user.refreshId = refreshId;
     user.refreshExpires = Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -118,19 +124,21 @@ router.post('/login', authLimiter, async (req, res) => {
 
     const secureFlag = process.env.NODE_ENV === 'production';
 
+    //create short-lived access token
     const accessToken = jwt.sign(
       { sub: user._id, role: user.role },
       process.env.JWT_SECRET || 'devsecret',
       { expiresIn: '15m' }
     );
 
+    //create long-lived refresh token
     const refreshToken = jwt.sign(
       { sub: user._id, rid: refreshId },
       process.env.JWT_REFRESH_SECRET || 'refreshsecret',
       { expiresIn: '7d' }
     );
 
-    // Set secure cookies
+    //set secure cookies for tokens
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: secureFlag,
@@ -153,8 +161,9 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 // -------------------------
-// REFRESH (rotate + re-issue tokens)
+// REFRESH TOKENS
 // -------------------------
+//rotate and re-issue access and refresh tokens
 router.post('/refresh', async (req, res) => {
   try {
     const token = req.cookies?.refresh_token;
@@ -175,12 +184,13 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'refresh token expired' });
     }
 
-    // rotate refreshId
+    //rotate refreshId for security
     const newRefreshId = crypto.randomBytes(32).toString('hex');
     user.refreshId = newRefreshId;
     user.refreshExpires = Date.now() + 7 * 24 * 60 * 60 * 1000;
     await user.save();
 
+    //issue new tokens
     const newRefreshToken = jwt.sign(
       { sub: user._id, rid: newRefreshId },
       process.env.JWT_REFRESH_SECRET || 'refreshsecret',
@@ -214,7 +224,10 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-// GET /api/auth/me
+// -------------------------
+// GET CURRENT USER
+// -------------------------
+//return minimal safe user info from token
 router.get('/me', (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -223,7 +236,6 @@ router.get('/me', (req, res) => {
     if (!token) return res.status(401).json({ error: 'no token' });
 
     const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || 'devsecret');
-    // return only safe claims
     const user = { id: decoded.sub || decoded._id || decoded.userId, role: decoded.role || decoded.role };
     return res.json({ user });
   } catch (_err) {
@@ -234,6 +246,7 @@ router.get('/me', (req, res) => {
 // -------------------------
 // LOGOUT
 // -------------------------
+//clear tokens and revoke refresh tokens
 router.post('/logout', async (req, res) => {
   try {
     const token = req.cookies?.refresh_token;

@@ -3,9 +3,9 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 module.exports = [
-  { ignores: ['node_modules/', 'coverage/', 'dist/', 'build/', '.circleci/', 'ssl/'] },
+  { ignores: ['node_modules/', 'coverage/', 'dist/', 'build/', '.circleci/', 'ssl/'] }, // ignore build artifacts
 
-  js.configs.recommended,
+  js.configs.recommended, // base ESLint recommended rules
 
   {
     files: ['**/*.js'],
@@ -15,14 +15,14 @@ module.exports = [
       globals: { ...globals.node, ...globals.es2021 }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }] // allow unused _args
     }
   },
 
   {
     files: ['test/**/*.test.js', '**/__tests__/**/*.js'],
     languageOptions: {
-      globals: { ...globals.jest }
+      globals: { ...globals.jest } // Jest globals in tests
     }
   }
 ];
