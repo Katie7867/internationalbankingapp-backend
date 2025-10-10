@@ -12,12 +12,14 @@ COPY . .
 
 # Default port inside container (CircleCI maps 5000:5000)
 ENV PORT=4000
+ENV USE_HTTPS=false
+ENV NODE_ENV=production
 
 # Optional (docs/visibility)
 EXPOSE 4000
 
 # Using curl for healthcheck
-HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=20 \
-  CMD curl -fsS "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://127.0.0.1:${PORT}/health || exit 1
 
 CMD ["node","src/index.js"]

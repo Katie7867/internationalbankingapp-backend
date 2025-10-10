@@ -89,7 +89,289 @@ jobs:
           paths:
             - .
 
-  docker_build_and_healthcheck:
+  
+
+require('dotenv').config(); const mongoose = require('mongoose'); const cookieParser = require('cookie-parser'); const csrf = require('csurf'); const https = require('https'); const fs = require('fs'); const express = require('express'); const helmet = require('helmet'); const cors = require
+
+pasted
+
+
+version: 2.1 executors: node_executor: docker: - image: cimg/node:22.0 resource_class: medium working_directory: ~/project base_docker: docker: - image: cimg/base:stable resource_class: medium working_directory: ~/project sonar_scanner:
+
+pasted
+
+i am making a CI pipeline in circleCI for a bankign application of mine. in it i have linting, testing, docker and sonarqube. my docker is not working and it says the container is uhealthy. it tries 60 times and then fails. fix this for me 
+
+here's my stuff to analyse
+
+Dockerfile:# Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+
+# Install curl so HEALTHCHECK works
+RUN apk add --no-cache curl
+
+COPY package*.json ./
+RUN npm install --production
+
+COPY . .
+
+# Default port inside container (CircleCI maps 5000:5000)
+ENV PORT=4000
+
+# Optional (docs/visibility)
+EXPOSE 4000
+
+# Using curl for healthcheck
+HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=20 \
+  CMD curl -fsS "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
+
+CMD ["node","src/index.js"]
+
+index.js:
+
+config.yml:
+
+let me know what else you need
+
+app.js:
+require('dotenv').config();
+const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
+
+const authRoutes = require('./routes/auth');
+const paymentsRouter = require('./routes/payments');
+
+const app = express();
+
+// -----------------------------
+// PROXY SETTINGS
+// -----------------------------
+//trust proxy headers in production (for HTTPS redirect, secure cookies)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+} else {
+  app.set('trust proxy', false);
+}
+
+// -----------------------------
+// SECURITY MIDDLEWARES
+// -----------------------------
+//helmet for secure headers, CSP, HSTS, and frameguard
+app.use(helmet());
+app.use(helmet.hsts({ maxAge: 31536000 }));
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    connectSrc: ["'self'"],
+    imgSrc: ["'self'", "data:"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
+    objectSrc: ["'none'"],
+    upgradeInsecureRequests: []
+  }
+}));
+app.use(helmet.frameguard({ action: 'deny' }));
+
+//limit body size to prevent large payload attacks
+app.use(express.json({ limit: '10kb' }));
+
+// -----------------------------
+// CORS
+// -----------------------------
+
+//****************
+//Code Attribution
+//The following CORS code was taken from MDN Web Docs
+//Author: s.n.
+//Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS
+//****************
+
+//allow requests only from trusted frontend with credentials
+app.use(cors({
+  origin: process.env.FRONTEND_ORIGIN || 'https://yourfrontenddomain.com',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: true
+}));
+
+// -----------------------------
+// RATE LIMITING
+// -----------------------------
+
+//****************
+//Code Attribution
+//The following Rate Limit code was taken from MDN Web Docs
+//Authors: Arvin Kahbazi, Maarten Balliauw, and Rick Anderson
+//Link: https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit?view=aspnetcore-9.0
+//****************
+
+//protect against brute-force and DoS attacks
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200
+});
+app.use(limiter);
+
+// -----------------------------
+// HTTPS REDIRECT (PRODUCTION)
+// -----------------------------
+//force HTTPS in production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect('https://' + req.headers.host + req.url);
+    }
+    next();
+  });
+}
+
+// -----------------------------
+// CSRF PROTECTION
+// -----------------------------
+
+//****************
+//Code Attribution
+//The following CRSF code was taken from MDN Web Docs
+//Author: s.n.
+//Link: https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/CSRF
+//****************
+
+//use cookie-based CSRF tokens
+app.use(cookieParser());
+const csrfProtection = csrf({ cookie: true });
+
+//endpoint to issue CSRF token cookie
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.cookie('XSRF-TOKEN', req.csrfToken(), {
+    httpOnly: false, // must be readable by frontend
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict'
+  });
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+// -----------------------------
+// ROUTES
+// -----------------------------
+app.use('/api/auth', authRoutes);
+
+//protect payments routes with CSRF middleware
+app.use('/api/payments', csrfProtection, paymentsRouter);
+
+//basic health check endpoints
+app.get('/', (req, res) => {
+  res.json({ ok: true, message: 'INSY7314 backend running' });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, ts: Date.now() });
+});
+
+// -----------------------------
+// ERROR HANDLING
+// -----------------------------
+//csurf errors (invalid/missing CSRF token)
+app.use((err, req, res, next) => {
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({ error: 'invalid CSRF token' });
+  }
+  next(err);
+});
+
+//global fallback error handler
+app.use((err, req, res, _next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'server error' });
+});
+
+module.exports = app;
+
+Looking at your setup, I can see several issues causing the container to fail its health check. Let me break down the problems:
+
+Root Causes
+HTTPS Server in index.js vs HTTP Health Check: Your index.js creates an HTTPS server with SSL certificates, but your Docker health check and CircleCI test are trying to reach it via HTTP. This mismatch causes connection failures.
+Missing SSL Certificates: Your Dockerfile doesn't copy the ./ssl/ directory, so the container can't start the HTTPS server at all.
+MongoDB Connection Blocking Startup: Your index.js exits if MongoDB connection fails, but CircleCI uses a dummy MongoDB URI that won't connect.
+Separate Files: You're using both index.js (with HTTPS and MongoDB) and app.js (with just Express app). The container runs index.js but your health endpoint is defined in app.js.
+Solution
+Here's the fixed version. The key change is making index.js work for both local HTTPS development and containerized HTTP deployment:
+
+Fixed index.js
+Code 
+Now update your Dockerfile to remove the health check interval conflicts:
+
+Fixed Dockerfile
+Code 
+Your app.js looks good, but let's verify the health endpoint is properly exported. It should already have this (which it does):
+
+javascript
+app.get('/health', (req, res) => {
+  res.status(200).json({ ok: true, ts: Date.now() });
+});
+
+module.exports = app;
+Finally, update your CircleCI config to give the container more time and better logging:
+
+Fixed CircleCI Config (docker_build_and_healthcheck job)
+Code 
+Summary of Changes
+Key fixes:
+
+index.js - Now conditionally uses HTTP (for Docker) or HTTPS (for local dev) based on USE_HTTPS environment variable
+index.js - MongoDB connection no longer crashes the app if it fails
+Dockerfile - Relaxed health check timing (30s start period instead of 5s)
+CircleCI - Better logging and increased sleep time between checks
+Environment - Sets USE_HTTPS=false in CircleCI to use HTTP mode
+Testing Locally
+To test the Docker container locally:
+
+bash
+docker build -t banking-backend:test .
+docker run -d --name test_banking \
+  -p 4000:4000 \
+  -e USE_HTTPS=false \
+  -e MONGO_URI=mongodb://localhost:27017/dummy \
+  -e JWT_SECRET=test123 \
+  banking-backend:test
+
+# Check logs
+docker logs -f test_banking
+
+# Test health endpoint
+curl http://localhost:4000/health
+
+# Cleanup
+docker rm -f test_banking
+The container should now start successfully and pass the health check! Let me know if you see any errors in the logs.
+
+you gave back index.js but you changed so much. i need you to keep what i have (coz i dont wnat to break my code) and only add what's necessary
+
+You're absolutely right - let me give you a minimal fix that keeps your existing code intact.
+
+Fixed index.js
+Code ∙ Version 2 
+What I Changed (Minimal Changes Only):
+Line 6: Added const http = require('http');
+Line 123-129: Modified MongoDB error handling to not exit when using dummy URI
+Line 139-141: Added /health endpoint
+Lines 167-183: Changed the server startup to conditionally use HTTP or HTTPS
+That's it!
+The key additions are:
+
+/health endpoint (needed for Docker healthcheck)
+Conditional HTTP/HTTPS server (defaults to HTTPS if certificates exist, falls back to HTTP for Docker)
+Don't crash on dummy MongoDB connection
+Everything else stays exactly as you had it. The Dockerfile and CircleCI config I provided earlier will work with this minimal change.
+
+
+
+
+
+docker_build_and_healthcheck:
     executor: base_docker
     steps:
       - checkout
@@ -108,6 +390,7 @@ jobs:
             : "${JWT_SECRET:=dummy}"
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
 
+            # Start container
             docker run -d --name banking_api \
               -p 4000:4000 \
               -e NODE_ENV=production \
@@ -117,30 +400,50 @@ jobs:
               -e JWT_SECRET="$JWT_SECRET" \
               "$IMAGE_NAME:$CIRCLE_SHA1"
 
+            echo "Container started. Waiting for health..."
+            sleep 5
+
+            # Show initial logs
+            echo "---- Initial container logs ----"
+            docker logs banking_api
+
+            # Wait for health check
             attempt=0
-            max_attempts=60
+            max_attempts=30
             until [ $attempt -ge $max_attempts ]; do
+              # Check Docker health status
               status="$(docker inspect --format='{{.State.Health.Status}}' banking_api 2>/dev/null || echo 'unknown')"
-              if [ "$status" = "healthy" ]; then
-                echo "Healthy via Docker HEALTHCHECK."
-                exit 0
-              fi
-              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" http://localhost:4000/health || echo 000)"
-              echo "Attempt $((attempt+1))/$max_attempts — docker:$status http:$code"
+              
+              # Check HTTP endpoint
+              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" http://localhost:4000/health 2>/dev/null || echo 000)"
+              
+              echo "Attempt $((attempt+1))/$max_attempts — docker_health:$status http_code:$code"
+              
               if [ "$code" = "200" ]; then
-                echo "----- /health body -----"
-                tail -c 1000 /tmp/health.txt || true
+                echo "----- /health response -----"
+                cat /tmp/health.txt || true
                 echo
-                echo "Health check PASSED via HTTP"
+                echo "✓ Health check PASSED"
                 exit 0
               fi
+              
+              if [ "$status" = "unhealthy" ]; then
+                echo "Docker reports unhealthy. Showing logs..."
+                docker logs --tail=100 banking_api
+                exit 1
+              fi
+              
               attempt=$((attempt+1))
-              sleep 2
+              sleep 3
             done
 
-            echo "Health check FAILED"
-            echo "---- Container logs ----"
-            docker logs --tail=300 banking_api || true
+            echo "✗ Health check FAILED after $max_attempts attempts"
+            echo "---- Final container logs ----"
+            docker logs --tail=200 banking_api || true
+            
+            echo "---- Container inspection ----"
+            docker inspect banking_api || true
+            
             exit 1
 
       - run:
