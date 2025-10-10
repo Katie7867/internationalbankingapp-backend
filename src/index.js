@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const https = require('https');
-const http = require('http');
 const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
@@ -12,7 +11,6 @@ const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
-
 const app = express();
 
 // -----------------------------
@@ -64,14 +62,13 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// HTTPS REDIRECT (PRODUCTION + HTTPS only)
 // -----------------------------
-// Force HTTPS only when we actually run HTTPS
-if (process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true') {
-  // If behind a proxy/load balancer, Express can detect req.secure when trust proxy is on
+// HTTPS REDIRECT (PRODUCTION)
+// -----------------------------
+//force HTTPS in production
+if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
-    const forwardedProto = req.headers['x-forwarded-proto'];
-    if (!req.secure && forwardedProto !== 'https') {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect('https://' + req.headers.host + req.url);
     }
     next();
@@ -85,17 +82,11 @@ if (process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true') {
 app.use(cookieParser());
 const csrfProtection = csrf({ cookie: true });
 
-// Helper: decide if cookies should be "secure"
-const isSecureCookie = (req) =>
-  req.secure ||
-  process.env.USE_HTTPS === 'true' ||
-  process.env.NODE_ENV === 'production';
-
 //endpoint to issue CSRF token cookie
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.cookie('XSRF-TOKEN', req.csrfToken(), {
     httpOnly: false, // must be readable by frontend
-    secure: isSecureCookie(req),
+    secure: true, // always secure for HTTPS
     sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
   });
   res.json({ csrfToken: req.csrfToken() });
@@ -141,7 +132,7 @@ app.get('/', (req, res) =>
 // -----------------------------
 // GLOBAL ERROR HANDLER
 // -----------------------------
-app.use((err, req, res, _next) => {
+app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'server error' });
 });
@@ -157,31 +148,16 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // -----------------------------
-// START SERVER (HTTPS optional)
+// START HTTPS SERVER
 // -----------------------------
+//use self-signed or CA certificates for HTTPS
 const PORT = process.env.PORT || 4000;
-const HOST = '0.0.0.0';
-const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
-if (USE_HTTPS) {
-  try {
-    const httpsOptions = {
-      key: fs.readFileSync('./ssl/key.pem'),
-      cert: fs.readFileSync('./ssl/cert.pem'),
-    };
-    https.createServer(httpsOptions, app).listen(PORT, HOST, () => {
-      console.log(`HTTPS server listening at https://localhost:${PORT}`);
-    });
-  } catch (e) {
-    console.warn('[WARN] USE_HTTPS=true but SSL files missing or unreadable. Falling back to HTTP.', e.message);
-    http.createServer(app).listen(PORT, HOST, () => {
-      console.log(`HTTP server (fallback) listening at http://localhost:${PORT}`);
-    });
-  }
-} else {
-  http.createServer(app).listen(PORT, HOST, () => {
-    console.log(`HTTP server listening at http://localhost:${PORT}`);
-  });
-}
+const httpsOptions = {
+  key: fs.readFileSync('./ssl/key.pem'),   //replace with actual key
+  cert: fs.readFileSync('./ssl/cert.pem'), //replace with actual cert
+};
 
-module.exports = app
+https.createServer(httpsOptions, app).listen(PORT, () => {
+  console.log(`Server listening at https://localhost:${PORT}`);
+});
