@@ -188,7 +188,8 @@ jobs:
             sonar-scanner \
               -Dsonar.login="$SONAR_TOKEN" \
               ${SONAR_PROJECT_KEY:+-Dsonar.projectKey="$SONAR_PROJECT_KEY"} \
-              ${SONAR_ORGANIZATION:+-Dsonar.organization="$SONAR_ORGANIZATION"}
+              ${SONAR_ORGANIZATION:+-Dsonar.organization="$SONAR_ORGANIZATION"} \
+              -Dsonar.jasmin.internal.disabled=true
 
 workflows:
   banking_pipeline:
