@@ -27,8 +27,11 @@ This repository contains the **REST API** for the INSY7314 Secure Customer & Emp
 10. [Testing](#-testing)  
 11. [DevSecOps (CI/CD + SAST + SCA)](#-devsecops-cicd--sast--sca)  
 12. [Alignment with INSY7314 POE](#-alignment-with-insy7314-poe)  
-13. [Sample Requests](#-sample-requests)  
-14. [License & Credits](#-license--credits)
+13. [Sample Requests](#-sample-requests)
+14.  [Repository Links](#-repository-links)  
+15. [Demo Video](#-demo-video)  
+16. [License & Credits](#-license--credits)
+    
 
 ---
 
@@ -290,6 +293,23 @@ curl -k -X POST https://localhost:4000/api/v1/admin/payments/663de1f5a1/verify \
 </p>
 
 ---
+---
+
+## 🔗 Repository Links
+
+```
+Frontend (this repo): https://github.com/VCDN-2025/insy7314-poe-part-3-ST10249863-TiffanyMather.git
+Backend (API):        https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather.git
+```
+
+---
+
+## 🎥 Demo Video
+
+```markdown
+<!-- 🔁 Replace thumbnail + link -->
+[![Watch the Demo](<!-- YT_THUMB_URL -->)](<!-- YT_VIDEO_URL -->)
+```
 
 ## 📜 License & Credits
 - **License:** MIT (see `LICENSE`)  
