@@ -13,8 +13,6 @@ const { patterns } = require('../validation/authValidation');
 const router = express.Router();
 const SALT_ROUNDS = 12;
 
-const { patterns } = require('../lib/patterns');
-
 // -------------------------
 // SECURITY MIDDLEWARE
 // -------------------------
