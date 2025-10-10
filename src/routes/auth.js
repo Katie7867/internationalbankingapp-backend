@@ -172,7 +172,7 @@ router.post('/refresh', async (req, res) => {
     let payload;
     try {
       payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refreshsecret');
-    } catch (e) {
+    } catch (_e) {
       return res.status(401).json({ error: 'invalid refresh token' });
     }
 

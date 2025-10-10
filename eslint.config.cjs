@@ -15,12 +15,16 @@ module.exports = [
       globals: { ...globals.node, ...globals.es2021 }
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }] // allow unused _args
+      "no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_"
+      }]
     }
   },
 
   {
-    files: ['test/**/*.test.js', '**/__tests__/**/*.js'],
+    files: ['test/**/*.test.js', '**/__tests__/**/*.js', 'test/setup.js'],
     languageOptions: {
       globals: { ...globals.jest } // Jest globals in tests
     }
