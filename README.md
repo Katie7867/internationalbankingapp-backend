@@ -562,10 +562,7 @@ const employees = [
 ];
 ```
 
-<p align="center">
-  
-  <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/RDZo7znAdn2u7sAcWH/giphy.gif" alt="shield GIF"/>
-</p>
+
 ---
 
 ## 🐳 Docker Deployment
