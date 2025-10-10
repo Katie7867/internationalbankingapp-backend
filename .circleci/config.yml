@@ -1,24 +1,24 @@
 version: 2.1
-
+ 
 executors:
   node_executor:
     docker:
       - image: cimg/node:22.0
     resource_class: medium
     working_directory: ~/project
-
+ 
   base_docker:
     docker:
       - image: cimg/base:stable
     resource_class: medium
     working_directory: ~/project
-
+ 
   sonar_scanner:
     docker:
       - image: sonarsource/sonar-scanner-cli:latest
     resource_class: medium
     working_directory: ~/project
-
+ 
 commands:
   restore_npm_cache:
     steps:
@@ -33,14 +33,14 @@ commands:
           key: v1-npm-{{ arch }}-{{ checksum "package-lock.json" }}
           paths:
             - ~/.npm
-
+ 
 jobs:
   lint_and_test:
     executor: node_executor
     steps:
       - checkout
       - restore_npm_cache
-
+ 
       - run:
           name: Install dependencies
           command: |
@@ -50,15 +50,15 @@ jobs:
               npm i
             fi
       - save_npm_cache
-
+ 
       - run:
           name: Sanity check required env
           command: |
             : "${MONGO_URI:=dummy}"
             : "${JWT_SECRET:=dummy}"
             echo "Env OK (dummy values allowed for unit tests that don't connect)."
-
-      # --- Improved ESLint Step ---
+ 
+      # ESLint: fail on errors, ignore warnings
       - run:
           name: Run ESLint (fail on errors, ignore warnings)
           command: |
@@ -67,48 +67,51 @@ jobs:
               echo "ESLint found errors. Please fix before merging.";
               exit 1;
             }
-
+ 
       - run:
           name: Run Jest (with coverage)
           command: npm test -- --ci --coverage
-
+ 
       - run:
           name: Make results dirs if missing
           when: always
           command: mkdir -p test-results coverage || true
-
+ 
       - store_test_results:
           path: test-results
-
+ 
       - store_artifacts:
           path: coverage
           when: always
-
+ 
       - persist_to_workspace:
           root: .
           paths:
             - .
-
+ 
   docker_build_and_healthcheck:
     executor: base_docker
     steps:
       - checkout
-      - setup_remote_docker
-
+      - setup_remote_docker:
+          version: default
+          docker_layer_caching: true
+ 
       - run:
           name: Build Docker image
           command: |
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
             docker build --no-cache -t "$IMAGE_NAME:$CIRCLE_SHA1" .
-
+ 
       - run:
-          name: Run container and wait for health
+          name: Run container and wait for health (sidecar curl on remote Docker VM)
           command: |
-            : "${MONGO_URI:=mongodb://localhost:27017/dummy}"  
+            set -eo pipefail
+            : "${MONGO_URI:=mongodb://localhost:27017/dummy}"
             : "${JWT_SECRET:=dummy}"
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
-
-            # Start container
+ 
+            # Start app container
             docker run -d --name banking_api \
               -p 4000:4000 \
               -e NODE_ENV=production \
@@ -117,58 +120,69 @@ jobs:
               -e MONGO_URI="$MONGO_URI" \
               -e JWT_SECRET="$JWT_SECRET" \
               "$IMAGE_NAME:$CIRCLE_SHA1"
-
-            echo "Container started. Waiting for health..."
+ 
+            echo "Container started. Waiting briefly before polling..."
             sleep 5
-
-            # Show initial logs
+ 
             echo "---- Initial container logs ----"
-            docker logs banking_api
-
-            # Wait for health check
+            docker logs banking_api || true
+ 
+            # Get the container's bridge-network IP (reachable from sidecar)
+            APP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' banking_api || true)"
+            if [ -z "$APP_IP" ]; then
+              echo "Failed to resolve app container IP."
+              docker ps -a || true
+              exit 1
+            fi
+            echo "App container IP: $APP_IP"
+ 
+            # Ensure curl sidecar image is available
+            docker pull curlimages/curl:8.10.1 >/dev/null
+ 
             attempt=0
             max_attempts=30
             until [ $attempt -ge $max_attempts ]; do
-              # Check Docker health status
+              # Docker health from the remote VM
               status="$(docker inspect --format='{{.State.Health.Status}}' banking_api 2>/dev/null || echo 'unknown')"
-              
-              # Check HTTP endpoint
-              code="$(curl -sk -o /tmp/health.txt -w "%{http_code}" http://localhost:4000/health 2>/dev/null || echo 000)"
-              
+ 
+              # Curl from a sidecar that's on the same Docker bridge network
+              # We print body on one line, then HTTP code on next line.
+              resp="$(docker run --rm --network bridge curlimages/curl:8.10.1 \
+                        -sS -m 3 "http://$APP_IP:4000/health" -w '\n%{http_code}' || true)"
+              code="$(printf "%s" "$resp" | tail -n1 | tr -d '\r')"
+              body="$(printf "%s" "$resp" | sed '$d')"
+ 
               echo "Attempt $((attempt+1))/$max_attempts — docker_health:$status http_code:$code"
-              
+ 
               if [ "$code" = "200" ]; then
                 echo "----- /health response -----"
-                cat /tmp/health.txt || true
-                echo
+                printf "%s\n" "$body"
                 echo "✓ Health check PASSED"
                 exit 0
               fi
-              
+ 
               if [ "$status" = "unhealthy" ]; then
                 echo "Docker reports unhealthy. Showing logs..."
-                docker logs --tail=100 banking_api
+                docker logs --tail=200 banking_api || true
                 exit 1
               fi
-              
+ 
               attempt=$((attempt+1))
               sleep 3
             done
-
+ 
             echo "✗ Health check FAILED after $max_attempts attempts"
             echo "---- Final container logs ----"
             docker logs --tail=200 banking_api || true
-            
             echo "---- Container inspection ----"
             docker inspect banking_api || true
-            
             exit 1
-
+ 
       - run:
           name: Cleanup
           when: always
           command: docker rm -f banking_api || true
-
+ 
   sonar_scan:
     executor: sonar_scanner
     environment:
@@ -190,7 +204,7 @@ jobs:
               ${SONAR_PROJECT_KEY:+-Dsonar.projectKey="$SONAR_PROJECT_KEY"} \
               ${SONAR_ORGANIZATION:+-Dsonar.organization="$SONAR_ORGANIZATION"} \
               -Dsonar.jasmin.internal.disabled=true
-
+ 
 workflows:
   banking_pipeline:
     jobs:
