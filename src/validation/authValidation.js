@@ -12,5 +12,6 @@ exports.patterns = {
   accountNumber: /^\d{8,12}$/,
 
   //password: at least 8 chars, must include letter, number, and special character; enforces strong password
+  // eslint-disable-next-line no-useless-escape
   password: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/
 }
