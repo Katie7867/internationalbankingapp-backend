@@ -157,6 +157,9 @@ app.post('/api/auth/login', bruteforce.prevent, (req, res, next) => {
 // -----------------------------
 // ROUTES
 // -----------------------------
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
 app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) =>
