@@ -11,10 +11,10 @@ RUN npm install --production
 COPY . .
 
 # Default port inside container (CircleCI maps 5000:5000)
-ENV PORT=5000
+ENV PORT=4000
 
 # Optional (docs/visibility)
-EXPOSE 5000
+EXPOSE 4000
 
 # Using curl for healthcheck
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=20 \

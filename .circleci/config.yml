@@ -99,12 +99,12 @@ jobs:
           name: Build Docker image
           command: |
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
-            docker build -t "$IMAGE_NAME:$CIRCLE_SHA1" .
+            docker build --no-cache -t "$IMAGE_NAME:$CIRCLE_SHA1" .
 
       - run:
           name: Run container and wait for health
           command: |
-            : "${MONGO_URI:=mongodb://localhost:27017/dummy}"  # not used by /health, just present
+            : "${MONGO_URI:=mongodb://localhost:27017/dummy}"  
             : "${JWT_SECRET:=dummy}"
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
 
