@@ -14,6 +14,12 @@ executors:
     resource_class: medium
     working_directory: ~/project
 
+  sonar_scanner:
+    docker:
+      - image: sonarsource/sonar-scanner-cli:latest
+    resource_class: medium
+    working_directory: ~/project
+
 commands:
   restore_npm_cache:
     steps:
@@ -46,7 +52,7 @@ jobs:
       - save_npm_cache
 
       - run:
-          name: Sanity check required env (only needed if your tests use them)
+          name: Sanity check required env
           command: |
             : "${MONGO_URI:=dummy}"
             : "${JWT_SECRET:=dummy}"
@@ -57,19 +63,25 @@ jobs:
           command: npm run lint
 
       - run:
-          name: Run Jest
-          command: npm test -- --ci
+          name: Run Jest (with coverage)
+          command: npm test -- --ci --coverage
 
       - run:
-          name: Collect test results/coverage (if present)
+          name: Make results dirs if missing
           when: always
-          command: |
-            mkdir -p test-results coverage || true
+          command: mkdir -p test-results coverage || true
+
       - store_test_results:
           path: test-results
+
       - store_artifacts:
           path: coverage
           when: always
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
 
   docker_build_and_healthcheck:
     executor: base_docker
@@ -130,11 +142,41 @@ jobs:
           when: always
           command: docker rm -f banking_api || true
 
+  sonar_scan:
+    executor: sonar_scanner
+    environment:
+      # SonarQube/Cloud reads coverage/lcov.info
+      SONAR_SCANNER_OPTS: "-Xmx1024m"
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Verify coverage file exists
+          command: |
+            test -f coverage/lcov.info || { echo "Missing coverage/lcov.info. Ensure tests ran with coverage."; exit 1; }
+      - run:
+          name: Run Sonar Scanner
+          command: |
+            test -n "$SONAR_TOKEN" || { echo "SONAR_TOKEN not set"; exit 1; }
+            test -n "$SONAR_HOST_URL" || { echo "SONAR_HOST_URL not set"; exit 1; }
+            sonar-scanner \
+              -Dsonar.login="$SONAR_TOKEN" \
+              ${SONAR_PROJECT_KEY:+-Dsonar.projectKey="$SONAR_PROJECT_KEY"} \
+              ${SONAR_ORGANIZATION:+-Dsonar.organization="$SONAR_ORGANIZATION"}
+
 workflows:
   banking_pipeline:
     jobs:
       - lint_and_test
       - docker_build_and_healthcheck:
+          requires:
+            - lint_and_test
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - sonar_scan:
           requires:
             - lint_and_test
           filters:

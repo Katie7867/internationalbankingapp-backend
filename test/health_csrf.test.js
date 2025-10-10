@@ -10,27 +10,22 @@ jest.mock('xss-clean', () => () => (req, res, next) => next());
 jest.mock('express-mongo-sanitize', () => () => (req, res, next) => next());
 jest.mock('express-rate-limit', () => () => (req, res, next) => next());
 
-
-// import supertest for HTTP request simulation
 const request = require('supertest');
 const app = require('../src/app');
 
-// -----------------------------
-// HEALTH ENDPOINT TEST
-// -----------------------------
-//verifies that backend is running and returns correct structure
-describe('Health', () => {
-  it('GET /health -> 200 with ok:true', async () => {
-    //send GET request to /health
+
+describe('health & csrf', () => {
+  it('GET /health -> 200 with ok:true and ts', async () => {
     const res = await request(app).get('/health');
-
-    //expect HTTP 200 OK
     expect(res.statusCode).toBe(200);
-
-    //expect response body to indicate service is healthy
-    expect(res.body).toHaveProperty('ok', true);
-
-    //timestamp should be a number
+    expect(res.body.ok).toBe(true);
     expect(typeof res.body.ts).toBe('number');
+  });
+
+  it('GET /api/csrf-token -> returns token and sets cookie', async () => {
+    const res = await request(app).get('/api/csrf-token');
+    expect(res.status).toBe(200);
+    expect(res.body.csrfToken).toBeTruthy();
+    expect(res.headers['set-cookie']).toBeDefined();
   });
 });
