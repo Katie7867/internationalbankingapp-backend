@@ -133,7 +133,7 @@ jobs:
               status="$(docker inspect --format='{{.State.Health.Status}}' banking_api 2>/dev/null || echo 'unknown')"
               
               # Check HTTP endpoint
-              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" https://localhost:4000/health 2>/dev/null || echo 000)"
+              code="$(curl -sk -o /tmp/health.txt -w "%{http_code}" https://localhost:4000/health 2>/dev/null || echo 000)"
               
               echo "Attempt $((attempt+1))/$max_attempts — docker_health:$status http_code:$code"
               
