@@ -49,6 +49,11 @@ Provide a **hardened, auditable** backend that:
 - Blocks common attacks with **Helmet**, **rate limiting**, **express-brute**, **CORS** rules
 
 ---
+<p align="center">
+  
+  <img src="https://media0.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/077i6AULCXc0FKTj9s/giphy.gif" width="250" alt="wallet GIF"/>
+</p>
+---
 
 ## 🧰 Prerequisites
 - **Node.js 20+** and **npm**  
@@ -147,6 +152,11 @@ The pipeline runs **Jest** tests, uploads **coverage**, and triggers **SonarQube
 See **`.circleci/config.yml`**.
 
 ---
+<p align="center">
+  
+  <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/RDZo7znAdn2u7sAcWH/giphy.gif" alt="shield GIF"/>
+</p>
+---
 
 ## 📡 API Endpoints
 
@@ -182,6 +192,11 @@ See **`.circleci/config.yml`**.
 
 ---
 
+<p align="center">
+  
+  <img src="https://media2.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bKj0qEKTVBdF2o5Dgn/giphy.gif" alt=" Access denied GIF"/>
+</p>
+---
 ## ✅ Validation (Regex Whitelists)
 *(Used both in request validators and at the schema level.)*
 ```txt
@@ -267,6 +282,12 @@ curl -k -X POST https://localhost:4000/api/v1/payments \
 curl -k -X POST https://localhost:4000/api/v1/admin/payments/663de1f5a1/verify \
   -H "Authorization: Bearer <EMPLOYEE_JWT>"
 ```
+
+---
+<p align="center">
+
+  <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sRFEa8lbeC7zbcIZZR/giphy-downsized-medium.gif" width="380" alt=" Bank GIF"/>
+</p>
 
 ---
 
