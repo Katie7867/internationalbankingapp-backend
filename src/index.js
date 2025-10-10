@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
@@ -83,11 +84,17 @@ if (process.env.NODE_ENV === 'production') {
 app.use(cookieParser());
 const csrfProtection = csrf({ cookie: true });
 
+// Helper: decide if cookies should be "secure"
+const isSecureCookie = (req) =>
+  req.secure ||
+  process.env.USE_HTTPS === 'true' ||
+  process.env.NODE_ENV === 'production';
+
 //endpoint to issue CSRF token cookie
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.cookie('XSRF-TOKEN', req.csrfToken(), {
     httpOnly: false, // must be readable by frontend
-    secure: true, // always secure for HTTPS
+    secure: isSecureCookie(req),
     sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
   });
   res.json({ csrfToken: req.csrfToken() });
@@ -149,15 +156,31 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // -----------------------------
-// START HTTPS SERVER
+// START SERVER (HTTPS optional)
 // -----------------------------
-//use self-signed or CA certificates for HTTPS
 const PORT = process.env.PORT || 4000;
-const httpsOptions = {
-  key: fs.readFileSync('./ssl/key.pem'),   //replace with actual key
-  cert: fs.readFileSync('./ssl/cert.pem'), //replace with actual cert
-};
+const HOST = '0.0.0.0';
+const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
-https.createServer(httpsOptions, app).listen(PORT, () => {
-  console.log(`Server listening at https://localhost:${PORT}`);
-});
+if (USE_HTTPS) {
+  try {
+    const httpsOptions = {
+      key: fs.readFileSync('./ssl/key.pem'),
+      cert: fs.readFileSync('./ssl/cert.pem'),
+    };
+    https.createServer(httpsOptions, app).listen(PORT, HOST, () => {
+      console.log(`HTTPS server listening at https://localhost:${PORT}`);
+    });
+  } catch (e) {
+    console.warn('[WARN] USE_HTTPS=true but SSL files missing or unreadable. Falling back to HTTP.', e.message);
+    http.createServer(app).listen(PORT, HOST, () => {
+      console.log(`HTTP server (fallback) listening at http://localhost:${PORT}`);
+    });
+  }
+} else {
+  http.createServer(app).listen(PORT, HOST, () => {
+    console.log(`HTTP server listening at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app

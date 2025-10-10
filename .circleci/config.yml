@@ -58,7 +58,7 @@ jobs:
             : "${JWT_SECRET:=dummy}"
             echo "Env OK (dummy values allowed for unit tests that don't connect)."
 
-      # --- ✅ Improved ESLint Step ---
+      # --- Improved ESLint Step ---
       - run:
           name: Run ESLint (fail on errors, ignore warnings)
           command: |
