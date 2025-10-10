@@ -3,17 +3,18 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');              
-const ExpressBrute = require('express-brute'); 
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
 const app = express();
+
+const USE_HTTPS = process.env.USE_HTTPS !== 'false';
 
 // -----------------------------
 // SECURITY MIDDLEWARES
@@ -28,7 +29,7 @@ app.use(
       scriptSrc: ["'self'"],
       connectSrc: ["'self'"],
       imgSrc: ["'self'", "data:"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production
+      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },
@@ -71,7 +72,7 @@ app.use(limiter);
 // HTTPS REDIRECT (PRODUCTION)
 // -----------------------------
 //force HTTPS in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && USE_HTTPS) {
   app.use((req, res, next) => {
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect('https://' + req.headers.host + req.url);

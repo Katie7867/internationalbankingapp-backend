@@ -108,6 +108,7 @@ jobs:
             : "${JWT_SECRET:=dummy}"
             IMAGE_NAME="${IMAGE_NAME:-banking-backend}"
 
+            # Start container
             docker run -d --name banking_api \
               -p 4000:4000 \
               -e NODE_ENV=production \
@@ -117,30 +118,50 @@ jobs:
               -e JWT_SECRET="$JWT_SECRET" \
               "$IMAGE_NAME:$CIRCLE_SHA1"
 
+            echo "Container started. Waiting for health..."
+            sleep 5
+
+            # Show initial logs
+            echo "---- Initial container logs ----"
+            docker logs banking_api
+
+            # Wait for health check
             attempt=0
-            max_attempts=60
+            max_attempts=30
             until [ $attempt -ge $max_attempts ]; do
+              # Check Docker health status
               status="$(docker inspect --format='{{.State.Health.Status}}' banking_api 2>/dev/null || echo 'unknown')"
-              if [ "$status" = "healthy" ]; then
-                echo "Healthy via Docker HEALTHCHECK."
-                exit 0
-              fi
-              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" http://localhost:4000/health || echo 000)"
-              echo "Attempt $((attempt+1))/$max_attempts — docker:$status http:$code"
+              
+              # Check HTTP endpoint
+              code="$(curl -s -o /tmp/health.txt -w "%{http_code}" http://localhost:4000/health 2>/dev/null || echo 000)"
+              
+              echo "Attempt $((attempt+1))/$max_attempts — docker_health:$status http_code:$code"
+              
               if [ "$code" = "200" ]; then
-                echo "----- /health body -----"
-                tail -c 1000 /tmp/health.txt || true
+                echo "----- /health response -----"
+                cat /tmp/health.txt || true
                 echo
-                echo "Health check PASSED via HTTP"
+                echo "✓ Health check PASSED"
                 exit 0
               fi
+              
+              if [ "$status" = "unhealthy" ]; then
+                echo "Docker reports unhealthy. Showing logs..."
+                docker logs --tail=100 banking_api
+                exit 1
+              fi
+              
               attempt=$((attempt+1))
-              sleep 2
+              sleep 3
             done
 
-            echo "Health check FAILED"
-            echo "---- Container logs ----"
-            docker logs --tail=300 banking_api || true
+            echo "✗ Health check FAILED after $max_attempts attempts"
+            echo "---- Final container logs ----"
+            docker logs --tail=200 banking_api || true
+            
+            echo "---- Container inspection ----"
+            docker inspect banking_api || true
+            
             exit 1
 
       - run:
