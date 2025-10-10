@@ -14,6 +14,8 @@ const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
 const app = express();
 
+const USE_HTTPS = process.env.USE_HTTPS !== 'false';
+
 // -----------------------------
 // SECURITY MIDDLEWARES
 // -----------------------------
@@ -158,7 +160,6 @@ if (process.env.NODE_ENV === 'production') {
 //use self-signed or CA certificates for HTTPS
 const PORT = process.env.PORT || 4000;
 
-const USE_HTTPS = process.env.USE_HTTPS !== 'false';
 
 if (USE_HTTPS && fs.existsSync('./ssl/key.pem') && fs.existsSync('./ssl/cert.pem')) {
   const httpsOptions = {
