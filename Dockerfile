@@ -20,6 +20,7 @@ EXPOSE 4000
 
 # Using curl for healthcheck
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -f http://127.0.0.1:4000/health || exit 1
+  CMD curl -s -f http://127.0.0.1:4000/health || exit 1
+
 
 CMD ["node","src/index.js"]
