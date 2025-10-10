@@ -3,13 +3,12 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');              
-const ExpressBrute = require('express-brute'); 
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
@@ -28,16 +27,13 @@ app.use(
       scriptSrc: ["'self'"],
       connectSrc: ["'self'"],
       imgSrc: ["'self'", "data:"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production
+      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },
   })
 );
 app.use(helmet.frameguard({ action: 'deny' }));
-
-// ✅ Morgan request logging
-app.use(morgan('dev'));
 
 //limit body size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
@@ -122,34 +118,12 @@ mongoose
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    if (MONGO_URI.includes('dummy')) {
+      console.warn('Using dummy MongoDB URI - continuing without DB');
+    } else {
+      process.exit(1);
+    }
   });
-
-// -----------------------------
-// EXPRESS-BRUTE (login protection)
-// -----------------------------
-const store = new ExpressBrute.MemoryStore();
-
-const bruteforce = new ExpressBrute(store, {
-  freeRetries: 5,
-  minWait: 5 * 60 * 1000,   // 5 minutes
-  maxWait: 60 * 60 * 1000,  // 1 hour
-  lifetime: 60 * 60,        // reset after 1 hour
-
-  // ✅ Custom response when locked out
-  failCallback: (req, res, next, nextValidRequestDate) => {
-    res.status(429).json({
-      error: 'Too many login attempts. Please try again in 5 minutes.',
-      retryAfter: nextValidRequestDate, // gives the timestamp when they can retry
-    });
-  },
-});
-
-// Apply brute-force protection only to login route
-// NOTE: keep this BEFORE the authRoutes middleware so it runs for /api/auth/login
-app.post('/api/auth/login', bruteforce.prevent, (req, res, next) => {
-  next(); // hand off to your existing auth logic inside authRoutes
-});
 
 // -----------------------------
 // ROUTES
@@ -184,11 +158,20 @@ if (process.env.NODE_ENV === 'production') {
 //use self-signed or CA certificates for HTTPS
 const PORT = process.env.PORT || 4000;
 
-const httpsOptions = {
-  key: fs.readFileSync('./ssl/key.pem'),   
-  cert: fs.readFileSync('./ssl/cert.pem'),
-};
+const USE_HTTPS = process.env.USE_HTTPS !== 'false';
 
-https.createServer(httpsOptions, app).listen(PORT, () => {
-  console.log(`Server listening at https://localhost:${PORT}`);
-});
+if (USE_HTTPS && fs.existsSync('./ssl/key.pem') && fs.existsSync('./ssl/cert.pem')) {
+  const httpsOptions = {
+    key: fs.readFileSync('./ssl/key.pem'),
+    cert: fs.readFileSync('./ssl/cert.pem'),
+  };
+
+  https.createServer(httpsOptions, app).listen(PORT, () => {
+    console.log(`Server listening at https://localhost:${PORT}`);
+  });
+} else {
+  // HTTP mode for Docker/CircleCI
+  http.createServer(app).listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening at http://0.0.0.0:${PORT}`);
+  });
+}
