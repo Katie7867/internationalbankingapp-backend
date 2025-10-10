@@ -8,6 +8,8 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');              
+const ExpressBrute = require('express-brute'); 
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
@@ -26,13 +28,16 @@ app.use(
       scriptSrc: ["'self'"],
       connectSrc: ["'self'"],
       imgSrc: ["'self'", "data:"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
+      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },
   })
 );
 app.use(helmet.frameguard({ action: 'deny' }));
+
+// ✅ Morgan request logging
+app.use(morgan('dev'));
 
 //limit body size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
@@ -121,6 +126,32 @@ mongoose
   });
 
 // -----------------------------
+// EXPRESS-BRUTE (login protection)
+// -----------------------------
+const store = new ExpressBrute.MemoryStore();
+
+const bruteforce = new ExpressBrute(store, {
+  freeRetries: 5,
+  minWait: 5 * 60 * 1000,   // 5 minutes
+  maxWait: 60 * 60 * 1000,  // 1 hour
+  lifetime: 60 * 60,        // reset after 1 hour
+
+  // ✅ Custom response when locked out
+  failCallback: (req, res, next, nextValidRequestDate) => {
+    res.status(429).json({
+      error: 'Too many login attempts. Please try again in 5 minutes.',
+      retryAfter: nextValidRequestDate, // gives the timestamp when they can retry
+    });
+  },
+});
+
+// Apply brute-force protection only to login route
+// NOTE: keep this BEFORE the authRoutes middleware so it runs for /api/auth/login
+app.post('/api/auth/login', bruteforce.prevent, (req, res, next) => {
+  next(); // hand off to your existing auth logic inside authRoutes
+});
+
+// -----------------------------
 // ROUTES
 // -----------------------------
 app.use('/api/auth', authRoutes);
@@ -154,8 +185,8 @@ if (process.env.NODE_ENV === 'production') {
 const PORT = process.env.PORT || 4000;
 
 const httpsOptions = {
-  key: fs.readFileSync('./ssl/key.pem'),   //replace with actual key
-  cert: fs.readFileSync('./ssl/cert.pem'), //replace with actual cert
+  key: fs.readFileSync('./ssl/key.pem'),   
+  cert: fs.readFileSync('./ssl/cert.pem'),
 };
 
 https.createServer(httpsOptions, app).listen(PORT, () => {
