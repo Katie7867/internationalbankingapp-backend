@@ -1,4 +1,3 @@
-# .circleci/config.yml
 version: 2.1
 
 executors:
@@ -41,6 +40,7 @@ jobs:
     steps:
       - checkout
       - restore_npm_cache
+
       - run:
           name: Install dependencies
           command: |
@@ -58,9 +58,15 @@ jobs:
             : "${JWT_SECRET:=dummy}"
             echo "Env OK (dummy values allowed for unit tests that don't connect)."
 
+      # --- ✅ Improved ESLint Step ---
       - run:
-          name: Run ESLint
-          command: npm run lint
+          name: Run ESLint (fail on errors, ignore warnings)
+          command: |
+            echo "Running ESLint..."
+            npm run lint -- --max-warnings=0 || {
+              echo "ESLint found errors. Please fix before merging.";
+              exit 1;
+            }
 
       - run:
           name: Run Jest (with coverage)
@@ -145,7 +151,6 @@ jobs:
   sonar_scan:
     executor: sonar_scanner
     environment:
-      # SonarQube/Cloud reads coverage/lcov.info
       SONAR_SCANNER_OPTS: "-Xmx1024m"
     steps:
       - attach_workspace:
