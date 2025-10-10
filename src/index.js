@@ -67,7 +67,7 @@ app.use(limiter);
 // HTTPS REDIRECT (PRODUCTION)
 // -----------------------------
 //force HTTPS in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && USE_HTTPS) {
   app.use((req, res, next) => {
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect('https://' + req.headers.host + req.url);
