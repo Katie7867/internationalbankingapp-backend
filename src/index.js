@@ -36,7 +36,7 @@ app.use(
 );
 app.use(helmet.frameguard({ action: 'deny' }));
 
-// ✅ Morgan request logging
+//Morgan request logging
 app.use(morgan('dev'));
 
 //limit body size to prevent large payload attacks
@@ -136,7 +136,7 @@ const bruteforce = new ExpressBrute(store, {
   maxWait: 60 * 60 * 1000,  // 1 hour
   lifetime: 60 * 60,        // reset after 1 hour
 
-  // ✅ Custom response when locked out
+  //custom response when locked out
   failCallback: (req, res, next, nextValidRequestDate) => {
     res.status(429).json({
       error: 'Too many login attempts. Please try again in 5 minutes.',
@@ -177,18 +177,34 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.set('trust proxy', false);
 }
-
 // -----------------------------
 // START HTTPS SERVER
 // -----------------------------
-//use self-signed or CA certificates for HTTPS
+const http = require('http');
+const path = require('path');
+
 const PORT = process.env.PORT || 4000;
+const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
-const httpsOptions = {
-  key: fs.readFileSync('./ssl/key.pem'),   
-  cert: fs.readFileSync('./ssl/cert.pem'),
-};
+// resolve certs relative to project root (one level up from /src)
+const keyPath = path.join(__dirname, '..', 'ssl', 'key.pem');
+const certPath = path.join(__dirname, '..', 'ssl', 'cert.pem');
 
-https.createServer(httpsOptions, app).listen(PORT, () => {
-  console.log(`Server listening at https://localhost:${PORT}`);
-});
+if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+  const httpsOptions = {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath),
+  };
+
+  https.createServer(httpsOptions, app).listen(PORT, () => {
+    console.log(`HTTPS server listening at https://localhost:${PORT}`);
+  });
+} else {
+  http.createServer(app).listen(PORT, () => {
+    console.log(`HTTP server listening at http://localhost:${PORT}`);
+    if (USE_HTTPS) {
+      console.warn('USE_HTTPS is true but SSL files were not found. Falling back to HTTP.');
+      console.warn(`Checked paths:\n - ${keyPath}\n - ${certPath}`);
+    }
+  });
+}
