@@ -763,10 +763,7 @@ Backend (API):        https://github.com/VCDN-2025/insy7314-poe-part-2-ST1024986
 
 ## 🎥 Demo Video
 
-```markdown
-<!-- 🔁 Replace thumbnail + link -->
-[![Watch the Demo](<!-- YT_THUMB_URL -->)](<!-- YT_VIDEO_URL -->)
-```
+[Watch the Demo on YouTube](https://youtu.be/eC-iYNzju1s)
 
 <p align="center">
 
