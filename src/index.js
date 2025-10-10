@@ -64,13 +64,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// HTTPS REDIRECT (PRODUCTION + HTTPS only)
 // -----------------------------
-// HTTPS REDIRECT (PRODUCTION)
-// -----------------------------
-//force HTTPS in production
-if (process.env.NODE_ENV === 'production') {
+// Force HTTPS only when we actually run HTTPS
+if (process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true') {
+  // If behind a proxy/load balancer, Express can detect req.secure when trust proxy is on
   app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    if (!req.secure && forwardedProto !== 'https') {
       return res.redirect('https://' + req.headers.host + req.url);
     }
     next();
