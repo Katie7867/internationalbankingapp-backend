@@ -9,6 +9,8 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');              
+const ExpressBrute = require('express-brute'); 
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
@@ -155,6 +157,10 @@ app.post('/api/auth/login', bruteforce.prevent, (req, res, next) => {
 // -----------------------------
 // ROUTES
 // -----------------------------
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
+
 app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) =>
@@ -181,11 +187,11 @@ if (process.env.NODE_ENV === 'production') {
 // -----------------------------
 // START HTTPS SERVER
 // -----------------------------
-const http = require('http');
+//const http = require('http');
 const path = require('path');
 
 const PORT = process.env.PORT || 4000;
-const USE_HTTPS = process.env.USE_HTTPS === 'true';
+//const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
 // resolve certs relative to project root (one level up from /src)
 const keyPath = path.join(__dirname, '..', 'ssl', 'key.pem');
