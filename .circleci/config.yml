@@ -113,7 +113,7 @@ jobs:
               -p 4000:4000 \
               -e NODE_ENV=production \
               -e PORT=4000 \
-              -e USE_HTTPS=false \
+              -e USE_HTTPS=true \
               -e MONGO_URI="$MONGO_URI" \
               -e JWT_SECRET="$JWT_SECRET" \
               "$IMAGE_NAME:$CIRCLE_SHA1"
