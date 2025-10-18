@@ -4,6 +4,7 @@ require('dotenv').config()
 
 const User = require('../models/User.js')
 const SALT_ROUNDS = 12
+const PEPPER = process.env.PEPPER_SECRET || 'devpepper';
 
 // -------------------------
 // SEED EMPLOYEE ACCOUNT
@@ -15,7 +16,7 @@ async function seedEmployee() {
     await mongoose.connect(process.env.MONGO_URI)
 
     //check if employee already exists to prevent duplicates
-    const existing = await User.findOne({ username: 'testemployee' })
+    const existing = await User.findOne({ username: 'employeetest' })
     if (existing) {
       console.log('Employee already exists:', existing.username)
       await mongoose.disconnect()
@@ -28,9 +29,9 @@ async function seedEmployee() {
     //create new employee account
     const newEmployee = await User.create({
       fullName: 'Employee 1',
-      idNumber: '0401015800087', 
-      accountNumber: '12345123',
-      username: 'testemployee',
+      idNumber: '0401015800123', 
+      accountNumber: '12312345',
+      username: 'employeetest',
       passwordHash,
       role: 'employee'
     })
