@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const crypto = require('crypto');
+const PEPPER = process.env.PEPPER_SECRET || 'devpepper';
+const zxcvbn = require('zxcvbn');
 
 const User = require('../models/User');
 const { patterns } = require('../validation/authValidation');
@@ -61,8 +63,14 @@ router.post('/register', authLimiter, async (req, res) => {
     const existing = await User.findOne({ $or: [{ username }, { accountNumber }] });
     if (existing) return res.status(400).json({ error: 'User or account already exists' });
 
+    // check password strength using zxcvbn
+    const strength = zxcvbn(password);
+    if (strength.score < 2) {
+      return res.status(400).json({ error: 'Password too weak — please choose a stronger password' });
+    }
+
     //hash password securely before storing
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password + PEPPER, SALT_ROUNDS);
 
     const newUser = await User.create({
       fullName,
@@ -113,7 +121,7 @@ router.post('/login', authLimiter, async (req, res) => {
     const user = await User.findOne({ username, accountNumber });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const valid = await bcrypt.compare(password + PEPPER, user.passwordHash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
     //rotate refresh token for session security

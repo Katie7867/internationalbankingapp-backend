@@ -23,7 +23,7 @@ async function seedEmployee() {
     }
 
     //hash password securely before storing
-    const passwordHash = await bcrypt.hash('Test@123', SALT_ROUNDS)
+    const passwordHash = await bcrypt.hash('Test@123' + PEPPER , SALT_ROUNDS)
 
     //create new employee account
     const newEmployee = await User.create({
