@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="32" failures="0" errors="0" time="3.586">
-  <testsuite name="validation patterns" errors="0" failures="0" skipped="0" timestamp="2025-10-10T12:38:03" time="0.948" tests="5">
+<testsuites name="jest tests" tests="34" failures="0" errors="0" time="3.33">
+  <testsuite name="auth middleware" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="0.651" tests="6">
+    <testcase classname="auth middleware 401 when no token" name="auth middleware 401 when no token" time="0.013">
+    </testcase>
+    <testcase classname="auth middleware 401 when jwt invalid" name="auth middleware 401 when jwt invalid" time="0.002">
+    </testcase>
+    <testcase classname="auth middleware attaches req.user and calls next when valid" name="auth middleware attaches req.user and calls next when valid" time="0.003">
+    </testcase>
+    <testcase classname="authorize middleware 401 if not authenticated" name="authorize middleware 401 if not authenticated" time="0.002">
+    </testcase>
+    <testcase classname="authorize middleware 403 if wrong role" name="authorize middleware 403 if wrong role" time="0.002">
+    </testcase>
+    <testcase classname="authorize middleware allows when role matches" name="authorize middleware allows when role matches" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="validation patterns" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="0.631" tests="5">
     <testcase classname="validation patterns username: 4-30 alnum/underscore" name="validation patterns username: 4-30 alnum/underscore" time="0.01">
     </testcase>
-    <testcase classname="validation patterns fullName: letters and punctuation 2-100" name="validation patterns fullName: letters and punctuation 2-100" time="0.005">
+    <testcase classname="validation patterns fullName: letters and punctuation 2-100" name="validation patterns fullName: letters and punctuation 2-100" time="0.001">
     </testcase>
     <testcase classname="validation patterns idNumber: exactly 13 digits" name="validation patterns idNumber: exactly 13 digits" time="0.001">
     </testcase>
@@ -12,66 +26,60 @@
     <testcase classname="validation patterns password: strong (letter, number, special, &gt;=8)" name="validation patterns password: strong (letter, number, special, &gt;=8)" time="0.002">
     </testcase>
   </testsuite>
-  <testsuite name="auth middleware" errors="0" failures="0" skipped="0" timestamp="2025-10-10T12:38:03" time="1.012" tests="6">
-    <testcase classname="auth middleware 401 when no token" name="auth middleware 401 when no token" time="0.01">
-    </testcase>
-    <testcase classname="auth middleware 401 when jwt invalid" name="auth middleware 401 when jwt invalid" time="0.004">
-    </testcase>
-    <testcase classname="auth middleware attaches req.user and calls next when valid" name="auth middleware attaches req.user and calls next when valid" time="0.002">
-    </testcase>
-    <testcase classname="authorize middleware 401 if not authenticated" name="authorize middleware 401 if not authenticated" time="0.001">
-    </testcase>
-    <testcase classname="authorize middleware 403 if wrong role" name="authorize middleware 403 if wrong role" time="0.001">
-    </testcase>
-    <testcase classname="authorize middleware allows when role matches" name="authorize middleware allows when role matches" time="0">
+  <testsuite name="Employees Routes" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="1.251" tests="1">
+    <testcase classname="Employees Routes GET /api/employees should return list" name="Employees Routes GET /api/employees should return list" time="0.041">
     </testcase>
   </testsuite>
-  <testsuite name="Health" errors="0" failures="0" skipped="0" timestamp="2025-10-10T12:38:03" time="2.65" tests="1">
-    <testcase classname="Health GET /health -&gt; 200 with ok:true" name="Health GET /health -&gt; 200 with ok:true" time="0.038">
+  <testsuite name="health &amp; csrf" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="2.149" tests="2">
+    <testcase classname="health &amp; csrf GET /health -&gt; 200 with ok:true and ts" name="health &amp; csrf GET /health -&gt; 200 with ok:true and ts" time="0.053">
+    </testcase>
+    <testcase classname="health &amp; csrf GET /api/csrf-token -&gt; returns token and sets cookie" name="health &amp; csrf GET /api/csrf-token -&gt; returns token and sets cookie" time="0.012">
     </testcase>
   </testsuite>
-  <testsuite name="health &amp; csrf" errors="0" failures="0" skipped="0" timestamp="2025-10-10T12:38:03" time="2.661" tests="2">
-    <testcase classname="health &amp; csrf GET /health -&gt; 200 with ok:true and ts" name="health &amp; csrf GET /health -&gt; 200 with ok:true and ts" time="0.031">
-    </testcase>
-    <testcase classname="health &amp; csrf GET /api/csrf-token -&gt; returns token and sets cookie" name="health &amp; csrf GET /api/csrf-token -&gt; returns token and sets cookie" time="0.008">
+  <testsuite name="Seed Admin Script" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="2.233" tests="1">
+    <testcase classname="Seed Admin Script should connect and exit gracefully" name="Seed Admin Script should connect and exit gracefully" time="0.917">
     </testcase>
   </testsuite>
-  <testsuite name="POST /api/auth/register" errors="0" failures="0" skipped="0" timestamp="2025-10-10T12:38:03" time="3.039" tests="18">
-    <testcase classname="POST /api/auth/register 400 when missing fields" name="POST /api/auth/register 400 when missing fields" time="0.063">
+  <testsuite name="Health" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="2.299" tests="1">
+    <testcase classname="Health GET /health -&gt; 200 with ok:true" name="Health GET /health -&gt; 200 with ok:true" time="0.046">
     </testcase>
-    <testcase classname="POST /api/auth/register 400 when validation fails" name="POST /api/auth/register 400 when validation fails" time="0.01">
+  </testsuite>
+  <testsuite name="POST /api/auth/register" errors="0" failures="0" skipped="0" timestamp="2025-10-21T19:10:30" time="2.457" tests="18">
+    <testcase classname="POST /api/auth/register 400 when missing fields" name="POST /api/auth/register 400 when missing fields" time="0.037">
     </testcase>
-    <testcase classname="POST /api/auth/register 400 when user exists (duplicate)" name="POST /api/auth/register 400 when user exists (duplicate)" time="0.009">
+    <testcase classname="POST /api/auth/register 400 when validation fails" name="POST /api/auth/register 400 when validation fails" time="0.005">
+    </testcase>
+    <testcase classname="POST /api/auth/register 400 when user exists (duplicate)" name="POST /api/auth/register 400 when user exists (duplicate)" time="0.005">
     </testcase>
     <testcase classname="POST /api/auth/register 200 on success (returns message &amp; userId &amp; role)" name="POST /api/auth/register 200 on success (returns message &amp; userId &amp; role)" time="0.008">
     </testcase>
-    <testcase classname="POST /api/auth/login 400 when missing fields" name="POST /api/auth/login 400 when missing fields" time="0.006">
+    <testcase classname="POST /api/auth/login 400 when missing fields" name="POST /api/auth/login 400 when missing fields" time="0.005">
     </testcase>
-    <testcase classname="POST /api/auth/login 400 invalid account number format" name="POST /api/auth/login 400 invalid account number format" time="0.006">
+    <testcase classname="POST /api/auth/login 400 invalid account number format" name="POST /api/auth/login 400 invalid account number format" time="0.008">
     </testcase>
     <testcase classname="POST /api/auth/login 401 when user not found" name="POST /api/auth/login 401 when user not found" time="0.005">
     </testcase>
-    <testcase classname="POST /api/auth/login 401 when bad password" name="POST /api/auth/login 401 when bad password" time="0.006">
+    <testcase classname="POST /api/auth/login 401 when bad password" name="POST /api/auth/login 401 when bad password" time="0.003">
     </testcase>
-    <testcase classname="POST /api/auth/login 200 on success, sets cookies, returns role" name="POST /api/auth/login 200 on success, sets cookies, returns role" time="0.007">
+    <testcase classname="POST /api/auth/login 200 on success, sets cookies, returns role" name="POST /api/auth/login 200 on success, sets cookies, returns role" time="0.008">
     </testcase>
-    <testcase classname="POST /api/auth/refresh 401 when no refresh token cookie" name="POST /api/auth/refresh 401 when no refresh token cookie" time="0.005">
+    <testcase classname="POST /api/auth/refresh 401 when no refresh token cookie" name="POST /api/auth/refresh 401 when no refresh token cookie" time="0.004">
     </testcase>
-    <testcase classname="POST /api/auth/refresh 401 when invalid refresh token" name="POST /api/auth/refresh 401 when invalid refresh token" time="0.007">
+    <testcase classname="POST /api/auth/refresh 401 when invalid refresh token" name="POST /api/auth/refresh 401 when invalid refresh token" time="0.003">
     </testcase>
-    <testcase classname="POST /api/auth/refresh 401 when refresh token revoked/mismatched" name="POST /api/auth/refresh 401 when refresh token revoked/mismatched" time="0.006">
+    <testcase classname="POST /api/auth/refresh 401 when refresh token revoked/mismatched" name="POST /api/auth/refresh 401 when refresh token revoked/mismatched" time="0.002">
     </testcase>
-    <testcase classname="POST /api/auth/refresh 401 when refresh token expired" name="POST /api/auth/refresh 401 when refresh token expired" time="0.005">
+    <testcase classname="POST /api/auth/refresh 401 when refresh token expired" name="POST /api/auth/refresh 401 when refresh token expired" time="0.004">
     </testcase>
-    <testcase classname="POST /api/auth/refresh 200 on success, rotates and sets cookies" name="POST /api/auth/refresh 200 on success, rotates and sets cookies" time="0.006">
+    <testcase classname="POST /api/auth/refresh 200 on success, rotates and sets cookies" name="POST /api/auth/refresh 200 on success, rotates and sets cookies" time="0.007">
     </testcase>
-    <testcase classname="GET /api/auth/me 401 when no token" name="GET /api/auth/me 401 when no token" time="0.004">
+    <testcase classname="GET /api/auth/me 401 when no token" name="GET /api/auth/me 401 when no token" time="0.005">
     </testcase>
     <testcase classname="GET /api/auth/me 401 when token invalid" name="GET /api/auth/me 401 when token invalid" time="0.004">
     </testcase>
     <testcase classname="GET /api/auth/me 200 when token valid (header)" name="GET /api/auth/me 200 when token valid (header)" time="0.004">
     </testcase>
-    <testcase classname="GET /api/auth/me 200 when token valid (cookie)" name="GET /api/auth/me 200 when token valid (cookie)" time="0.004">
+    <testcase classname="GET /api/auth/me 200 when token valid (cookie)" name="GET /api/auth/me 200 when token valid (cookie)" time="0.003">
     </testcase>
   </testsuite>
 </testsuites>
