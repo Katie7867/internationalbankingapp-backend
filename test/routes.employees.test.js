@@ -1,7 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const router = require('../src/routes/employees');
-const { auth, authorize } = require('../src/middleware/auth');
+const { auth: _auth, authorize: _authorize } = require('../src/middleware/auth');
 
 // mock auth middleware
 jest.mock('../src/middleware/auth', () => ({
