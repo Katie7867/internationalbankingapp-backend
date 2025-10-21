@@ -161,6 +161,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is healthy' });
 });
 app.use('/api/auth', authRoutes);
+app.use('/api/employees', require('./routes/employees'));
+
 
 app.get('/', (req, res) =>
   res.json({ ok: true, message: 'INSY7314 backend running' })

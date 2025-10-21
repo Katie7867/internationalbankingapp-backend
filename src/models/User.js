@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
 
   //role-based access control: customer or employee
-  role: { type: String, enum: ['customer', 'employee'], default: 'customer' },
+  role: { type: String, enum: ['customer', 'employee', 'admin'], default: 'customer' },
 
   //refresh token id for secure session management
   refreshId: { type: String, default: null },
