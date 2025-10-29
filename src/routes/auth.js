@@ -24,9 +24,10 @@ router.use(xss());
 router.use(mongoSanitize());
 
 //limit login/register attempts to prevent brute force attacks
+//CURRENTLY IN DEV MODE - ADJUST VALUES FOR PRODUCTION
 const authLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 5,
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 100,                  // 100 attempts
   keyGenerator: (req) => {
     //limit per username/accountNumber combination
     const userKey = `${req.body.username || ''}:${req.body.accountNumber || ''}`.trim();
@@ -107,24 +108,26 @@ router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password, accountNumber } = req.body;
 
-    //check all required fields
     if (!username || !password || !accountNumber) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
+    // FIX: Convert to string for regex + DB match
+    const accStr = String(accountNumber).trim();
+
     //validate account number format
-    if (!patterns.accountNumber.test(accountNumber)) {
+    if (!patterns.accountNumber.test(accStr)) {
       return res.status(400).json({ error: 'Invalid account number format' });
     }
 
     //find user and verify password
-    const user = await User.findOne({ username, accountNumber });
+    const user = await User.findOne({ username, accountNumber: accStr });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
     const valid = await bcrypt.compare(password + PEPPER, user.passwordHash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    //rotate refresh token for session security
+    // ... rest of JWT logic (unchanged)
     const refreshId = crypto.randomBytes(32).toString('hex');
     user.refreshId = refreshId;
     user.refreshExpires = Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -132,21 +135,18 @@ router.post('/login', authLimiter, async (req, res) => {
 
     const secureFlag = process.env.NODE_ENV === 'production';
 
-    //create short-lived access token
     const accessToken = jwt.sign(
       { sub: user._id, role: user.role },
       process.env.JWT_SECRET || 'devsecret',
       { expiresIn: '15m' }
     );
 
-    //create long-lived refresh token
     const refreshToken = jwt.sign(
       { sub: user._id, rid: refreshId },
       process.env.JWT_REFRESH_SECRET || 'refreshsecret',
       { expiresIn: '7d' }
     );
 
-    //set secure cookies for tokens
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: secureFlag,
@@ -163,7 +163,7 @@ router.post('/login', authLimiter, async (req, res) => {
 
     return res.json({ message: 'Login successful', role: user.role });
   } catch (err) {
-    console.error(err);
+    console.error('LOGIN ERROR:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

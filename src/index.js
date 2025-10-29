@@ -34,6 +34,7 @@ app.use(
       styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
+      reportUri: '/api/csp-report'
     },
   })
 );
@@ -44,6 +45,22 @@ app.use(morgan('dev'));
 
 //limit body size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
+
+// Modern Report-To header (optional, works alongside report-uri)
+app.use((req, res, next) => {
+  res.setHeader(
+    'Report-To',
+    JSON.stringify([
+      {
+        group: 'csp-endpoint',
+        max_age: 10886400,
+        endpoints: [{ url: 'https://localhost:4000/api/csp-report' }], // change to your domain in prod
+        include_subdomains: true,
+      },
+    ])
+  );
+  next();
+});
 
 // -----------------------------
 // CORS
@@ -167,7 +184,27 @@ app.use('/api/employees', require('./routes/employees'));
 app.get('/', (req, res) =>
   res.json({ ok: true, message: 'INSY7314 backend running' })
 );
-
+// -----------------------------
+// CSP VIOLATION REPORT ENDPOINT
+// -----------------------------
+app.post(
+  '/api/csp-report',
+  express.json({ type: 'application/csp-report' }),
+  (req, res) => {
+    const report = req.body['csp-report'];
+    if (report) {
+      console.warn('CSP VIOLATION DETECTED:', {
+        time: new Date().toISOString(),
+        documentUri: report['document-uri'],
+        blockedUri: report['blocked-uri'],
+        violatedDirective: report['violated-directive'],
+        sourceFile: report['source-file'],
+        lineNumber: report['line-number'],
+      });
+    }
+    res.status(204).end();
+  }
+);
 // -----------------------------
 // GLOBAL ERROR HANDLER
 // -----------------------------
@@ -175,6 +212,12 @@ app.use((err, req, res, _next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'server error' });
 });
+
+// -----------------------------
+// HPP PROTECTION (parameter pollution)
+// -----------------------------
+const hpp = require('hpp');
+app.use(hpp());
 
 // -----------------------------
 // TRUST PROXY
