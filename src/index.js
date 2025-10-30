@@ -52,7 +52,7 @@ app.use(helmet({
     }
   }
 }));
-app.use(helmet.frameguard({ action: 'deny' }));
+
 
 // -----------------------------
 // LOGGING + BODY PARSING
@@ -92,28 +92,31 @@ app.options('*', cors());
 app.use(rateLimit({ windowMs: 15*60*1000, max: 200 }));
 
 // -----------------------------
-// CSRF SETUP
+// CSRF SETUP - UPDATED
 // -----------------------------
-const csrfProtection = csrf({ cookie: true });
+const csrfProtection = csrf({ 
+  cookie: {
+    key: 'XSRF-TOKEN',
+    httpOnly: false,      // Frontend needs to read this
+    secure: true,         // Must be true for HTTPS
+    sameSite: 'none',     // Cross-site required
+    maxAge: 3600000       // 1 hour
+  }
+});
 
 // Provide CSRF token for the frontend
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
   
-  // Remove the domain setting - let the browser handle it
-  const cookieOptions = {
+  // The cookie is automatically set by csurf, but we'll also set it explicitly
+  res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     secure: true,
     sameSite: 'none',
     maxAge: 3600000
-  };
+  });
   
-  // Only set domain in production if needed, but try without first
-  // if (isProduction) {
-  //   cookieOptions.domain = '.onrender.com';
-  // }
-  
-  res.cookie('XSRF-TOKEN', token, cookieOptions);
+  console.log('CSRF token generated for origin:', req.headers.origin);
   res.json({ csrfToken: token });
 });
 
