@@ -30,16 +30,17 @@ const FRONTEND_URL = process.env.FRONTEND_ORIGIN || (isProduction
 app.use(helmet());
 app.use(
   helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", FRONTEND_URL],
-      imgSrc: ["'self'", "data:"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  })
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    connectSrc: ["'self'", FRONTEND_URL, 'https://big-5-bank-api-backend.onrender.com'],
+    imgSrc: ["'self'", "data:"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    objectSrc: ["'none'"],
+    upgradeInsecureRequests: [],
+  },
+})
+
 );
 app.use(helmet.frameguard({ action: 'deny' }));
 
@@ -53,13 +54,16 @@ app.use(cookieParser());
 // -----------------------------
 // CORS
 // -----------------------------
+// 
 app.use(cors({
   origin: [
     'http://localhost:5173',
     'https://localhost:5173',
     'https://big-5-bank-frontend.onrender.com'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Authorization']
 }));
 // -----------------------------
 // RATE LIMITING
@@ -75,9 +79,9 @@ const csrfProtection = csrf({ cookie: true });
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
   res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,          // readable by frontend JS
-    secure: isProduction,     // only secure in prod
-    sameSite: isProduction ? 'None' : 'Lax'
+    httpOnly: false,      // frontend JS can read
+    secure: isProduction, // must be true in prod
+    sameSite: 'None'      // cross-origin cookies
   });
   res.json({ csrfToken: token });
 });
