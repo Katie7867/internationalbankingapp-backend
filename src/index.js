@@ -92,7 +92,7 @@ app.options('*', cors());
 app.use(rateLimit({ windowMs: 15*60*1000, max: 200 }));
 
 // -----------------------------
-// CSRF SETUP - FIXED VERSION
+// CSRF SETUP - FIXED FOR RENDER
 // -----------------------------
 const csrfProtection = csrf({ 
   cookie: {
@@ -100,7 +100,8 @@ const csrfProtection = csrf({
     httpOnly: false,
     secure: true,
     sameSite: 'none',
-    maxAge: 3600000
+    maxAge: 3600000,
+    domain: '.onrender.com'  // ← ADD THIS - dot prefix for all subdomains
   }
 });
 
@@ -108,16 +109,16 @@ const csrfProtection = csrf({
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
   
-  // Double-set the cookie to ensure it works
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     secure: true,
     sameSite: 'none',
     maxAge: 3600000,
-    path: '/'
+    path: '/',
+    domain: '.onrender.com'  // ← ADD THIS HERE TOO
   });
   
-  console.log('CSRF token generated, cookie should be set');
+  console.log('CSRF token generated for domain:', req.headers.origin);
   res.json({ csrfToken: token });
 });
 
