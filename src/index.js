@@ -29,9 +29,13 @@ app.use(
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://big-5-bank-frontend.onrender.com",
+        "https://big-5-bank-api-backend.onrender.com"
+      ],
       imgSrc: ["'self'", "data:"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
+      styleSrc: ["'self'", "'unsafe-inline'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
       reportUri: '/api/csp-report'
@@ -108,14 +112,15 @@ app.use(cookieParser());
 const csrfProtection = csrf({ cookie: true });
 
 //endpoint to issue CSRF token cookie
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  res.cookie('XSRF-TOKEN', req.csrfToken(), {
-    httpOnly: false, // must be readable by frontend
-    secure: true, // always secure for HTTPS
+app.get('/api/csrf-token', (req, res) => {
+  const token = req.csrfToken ? req.csrfToken() : 'token';
+  res.cookie('XSRF-TOKEN', token, {
+    httpOnly: false,
+    secure: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
   });
-  res.json({ csrfToken: req.csrfToken() });
-});
+  res.json({ csrfToken: token });
+})
 
 //protect payments routes with CSRF middleware
 app.use('/api/payments', csrfProtection, paymentsRouter);

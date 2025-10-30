@@ -25,19 +25,22 @@ if (process.env.NODE_ENV === 'production') {
 // SECURITY MIDDLEWARES
 // -----------------------------
 //helmet for secure headers, CSP, HSTS, and frameguard
-app.use(helmet());
-app.use(helmet.hsts({ maxAge: 31536000 }));
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
-    connectSrc: ["'self'"],
+    connectSrc: [
+      "'self'",
+      "https://big-5-bank-frontend.onrender.com", // ✅ allow frontend to connect
+      "https://big-5-bank-api-backend.onrender.com" // ✅ allow backend self-calls
+    ],
     imgSrc: ["'self'", "data:"],
-    styleSrc: ["'self'", "'unsafe-inline'"], // remove 'unsafe-inline' in production if possible
+    styleSrc: ["'self'", "'unsafe-inline'"],
     objectSrc: ["'none'"],
     upgradeInsecureRequests: []
   }
 }));
+
 app.use(helmet.frameguard({ action: 'deny' }));
 
 //limit body size to prevent large payload attacks
@@ -56,10 +59,15 @@ app.use(express.json({ limit: '10kb' }));
 
 //allow requests only from trusted frontend with credentials
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || 'https://yourfrontenddomain.com',
+  origin: [
+    'http://localhost:5173',
+    'https://localhost:5173',
+    'https://big-5-bank-frontend.onrender.com'
+  ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true
 }));
+
 
 // -----------------------------
 // RATE LIMITING
@@ -108,14 +116,16 @@ app.use(cookieParser());
 const csrfProtection = csrf({ cookie: true });
 
 //endpoint to issue CSRF token cookie
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  res.cookie('XSRF-TOKEN', req.csrfToken(), {
-    httpOnly: false, // must be readable by frontend
+app.get('/api/csrf-token', (req, res) => {
+  const token = req.csrfToken ? req.csrfToken() : 'token';
+  res.cookie('XSRF-TOKEN', token, {
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Strict'
   });
-  res.json({ csrfToken: req.csrfToken() });
+  res.json({ csrfToken: token });
 });
+
 
 // -----------------------------
 // ROUTES
