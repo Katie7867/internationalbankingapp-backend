@@ -46,18 +46,18 @@ app.use(morgan('dev'));
 //limit body size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
 
-// Modern Report-To header (optional, works alongside report-uri)
+// Dynamic Report-To header (fixes localhost:4000)
 app.use((req, res, next) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const baseUrl = isProduction ? `https://${req.headers.host}` : 'https://localhost:4000';
   res.setHeader(
     'Report-To',
-    JSON.stringify([
-      {
-        group: 'csp-endpoint',
-        max_age: 10886400,
-        endpoints: [{ url: 'https://localhost:4000/api/csp-report' }], // change to your domain in prod
-        include_subdomains: true,
-      },
-    ])
+    JSON.stringify([{
+      group: 'csp-endpoint',
+      max_age: 10886400,
+      endpoints: [{ url: `${baseUrl}/api/csp-report` }],
+      include_subdomains: true,
+    }])
   );
   next();
 });
@@ -71,12 +71,12 @@ app.use(
     origin: [
       'http://localhost:5173',
       'https://localhost:5173',
+      'https://big-5-bank-frontend.onrender.com'  
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   })
 );
-
 // -----------------------------
 // RATE LIMITING
 // -----------------------------
@@ -229,33 +229,9 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', false);
 }
 // -----------------------------
-// START HTTPS SERVER
+// START SERVER (Render only)
 // -----------------------------
-//const http = require('http');
-const path = require('path');
-
 const PORT = process.env.PORT || 4000;
-//const USE_HTTPS = process.env.USE_HTTPS === 'true';
-
-// resolve certs relative to project root (one level up from /src)
-const keyPath = path.join(__dirname, '..', 'ssl', 'key.pem');
-const certPath = path.join(__dirname, '..', 'ssl', 'cert.pem');
-
-if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-  const httpsOptions = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath),
-  };
-
-  https.createServer(httpsOptions, app).listen(PORT, () => {
-    console.log(`HTTPS server listening at https://localhost:${PORT}`);
-  });
-} else {
-  http.createServer(app).listen(PORT, () => {
-    console.log(`HTTP server listening at http://localhost:${PORT}`);
-    if (USE_HTTPS) {
-      console.warn('USE_HTTPS is true but SSL files were not found. Falling back to HTTP.');
-      console.warn(`Checked paths:\n - ${keyPath}\n - ${certPath}`);
-    }
-  });
-}
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
