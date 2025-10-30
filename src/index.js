@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const crypto = require('crypto');
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
@@ -56,7 +57,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
 // -----------------------------
-// CORS - FIXED VERSION
+// CORS
 // -----------------------------
 app.use(cors({
   origin: function (origin, callback) {
@@ -75,7 +76,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  exposedHeaders: ['X-CSRF-Token'] // Expose CSRF token header
+  exposedHeaders: ['X-CSRF-Token']
 }));
 
 app.options('*', cors());
@@ -86,46 +87,103 @@ app.options('*', cors());
 app.use(rateLimit({ windowMs: 15*60*1000, max: 200 }));
 
 // -----------------------------
-// CSRF SETUP - FIXED FOR CROSS-DOMAIN
+// CSRF SETUP - SIMPLIFIED
 // -----------------------------
-// Use session-based CSRF instead of cookie-based for cross-domain
-const csrfProtection = csrf({ 
-  cookie: false, // CRITICAL: Don't use cookies for cross-domain
-  sessionKey: 'csrfSecret' // We'll store in a cookie manually
+// Store secrets in memory (for single-instance apps)
+// For multi-instance, use Redis or database
+const csrfSecrets = new Map();
+
+// Provide CSRF token endpoint - NO CSRF PROTECTION ON THIS ENDPOINT
+app.get('/api/csrf-token', (req, res) => {
+  try {
+    // Generate or retrieve secret for this session
+    let secret = req.cookies.csrfSecret;
+    
+    if (!secret || !csrfSecrets.has(secret)) {
+      secret = crypto.randomBytes(32).toString('hex');
+      csrfSecrets.set(secret, Date.now());
+      
+      // Set cookie with secret
+      res.cookie('csrfSecret', secret, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 3600000, // 1 hour
+        path: '/'
+      });
+    }
+    
+    // Generate token from secret
+    const token = crypto.createHmac('sha256', secret)
+      .update('csrf-token')
+      .digest('hex');
+    
+    console.log('CSRF token generated for session:', secret.substring(0, 10) + '...');
+    res.json({ csrfToken: token });
+  } catch (error) {
+    console.error('Error generating CSRF token:', error);
+    res.status(500).json({ error: 'Failed to generate CSRF token' });
+  }
 });
 
-// Custom CSRF middleware that works cross-domain
-const csrfMiddleware = (req, res, next) => {
-  // Generate or retrieve CSRF secret
-  let secret = req.cookies.csrfSecret;
-  
-  if (!secret) {
-    // Generate new secret
-    secret = require('crypto').randomBytes(32).toString('hex');
-    res.cookie('csrfSecret', secret, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      maxAge: 3600000,
-      path: '/'
+// CSRF validation middleware
+const validateCsrf = (req, res, next) => {
+  try {
+    const token = req.headers['x-csrf-token'];
+    const secret = req.cookies.csrfSecret;
+    
+    if (!token) {
+      console.error('No CSRF token in request');
+      return res.status(403).json({ 
+        error: 'Invalid CSRF token',
+        message: 'No CSRF token provided'
+      });
+    }
+    
+    if (!secret || !csrfSecrets.has(secret)) {
+      console.error('No valid CSRF secret in cookies');
+      return res.status(403).json({ 
+        error: 'Invalid CSRF token',
+        message: 'Session expired. Please refresh the page.'
+      });
+    }
+    
+    // Verify token matches secret
+    const expectedToken = crypto.createHmac('sha256', secret)
+      .update('csrf-token')
+      .digest('hex');
+    
+    if (token !== expectedToken) {
+      console.error('CSRF token mismatch');
+      return res.status(403).json({ 
+        error: 'Invalid CSRF token',
+        message: 'Token verification failed'
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('CSRF validation error:', error);
+    res.status(403).json({ 
+      error: 'Invalid CSRF token',
+      message: 'Validation error'
     });
   }
-  
-  // Attach secret to session for csrf library
-  req.session = req.session || {};
-  req.session.csrfSecret = secret;
-  
-  csrfProtection(req, res, next);
 };
 
-// Provide CSRF token endpoint
-app.get('/api/csrf-token', csrfMiddleware, (req, res) => {
-  const token = req.csrfToken();
-  console.log('CSRF token generated:', token.substring(0, 10) + '...');
+// Clean up old secrets every hour
+setInterval(() => {
+  const now = Date.now();
+  const oneHour = 3600000;
   
-  // Return token in response body (not cookie)
-  res.json({ csrfToken: token });
-});
+  for (const [secret, timestamp] of csrfSecrets.entries()) {
+    if (now - timestamp > oneHour) {
+      csrfSecrets.delete(secret);
+    }
+  }
+  
+  console.log(`Cleaned up CSRF secrets. Active sessions: ${csrfSecrets.size}`);
+}, 3600000);
 
 // -----------------------------
 // DATABASE CONNECTION
@@ -148,7 +206,7 @@ app.get('/', (req,res) => res.json({ ok:true, message:'Backend running' }));
 // Middleware to apply CSRF to state-changing requests
 const applyCSRF = (req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    csrfMiddleware(req, res, next);
+    validateCsrf(req, res, next);
   } else {
     next();
   }
@@ -160,24 +218,10 @@ app.use('/api/payments', applyCSRF, paymentsRouter);
 app.use('/api/employees', applyCSRF, employeesRouter);
 
 // -----------------------------
-// CSRF ERROR HANDLER
-// -----------------------------
-app.use((err, req, res, next) => {
-  if (err && err.code === 'EBADCSRFTOKEN') {
-    console.error('CSRF token validation failed');
-    console.error('Token from header:', req.headers['x-csrf-token']?.substring(0, 10) + '...');
-    return res.status(403).json({ 
-      error: 'Invalid CSRF token',
-      message: 'Please refresh the page and try again'
-    });
-  }
-  next(err);
-});
-
-// -----------------------------
 // GLOBAL ERROR HANDLER
 // -----------------------------
 app.use((err, req, res, _next) => {
+  console.error('Error:', err.message);
   console.error(err.stack);
   res.status(500).json({ error: 'server error' });
 });
