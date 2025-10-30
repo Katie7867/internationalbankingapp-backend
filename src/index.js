@@ -142,7 +142,10 @@ app.get('/', (req,res) => res.json({ ok:true, message:'Backend running' }));
 // ---------- AUTH ROUTES ----------
 // Only protect POST/PUT/DELETE routes with CSRF
 app.use('/api/auth', (req, res, next) => {
-  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+
+  if (req.path === '/login') {
+    next();
+  } else if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
     csrfProtection(req, res, next);
   } else {
     next();
