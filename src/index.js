@@ -92,15 +92,15 @@ app.options('*', cors());
 app.use(rateLimit({ windowMs: 15*60*1000, max: 200 }));
 
 // -----------------------------
-// CSRF SETUP - UPDATED
+// CSRF SETUP - FIXED VERSION
 // -----------------------------
 const csrfProtection = csrf({ 
   cookie: {
     key: 'XSRF-TOKEN',
-    httpOnly: false,      // Frontend needs to read this
-    secure: true,         // Must be true for HTTPS
-    sameSite: 'none',     // Cross-site required
-    maxAge: 3600000       // 1 hour
+    httpOnly: false,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 3600000
   }
 });
 
@@ -108,15 +108,16 @@ const csrfProtection = csrf({
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
   
-  // The cookie is automatically set by csurf, but we'll also set it explicitly
+  // Double-set the cookie to ensure it works
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     secure: true,
     sameSite: 'none',
-    maxAge: 3600000
+    maxAge: 3600000,
+    path: '/'
   });
   
-  console.log('CSRF token generated for origin:', req.headers.origin);
+  console.log('CSRF token generated, cookie should be set');
   res.json({ csrfToken: token });
 });
 
