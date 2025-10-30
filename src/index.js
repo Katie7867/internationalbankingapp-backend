@@ -54,10 +54,13 @@ app.use(cookieParser());
 // CORS
 // -----------------------------
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: [
+    'http://localhost:5173',
+    'https://localhost:5173',
+    'https://big-5-bank-frontend.onrender.com'
+  ],
   credentials: true
 }));
-
 // -----------------------------
 // RATE LIMITING
 // -----------------------------
