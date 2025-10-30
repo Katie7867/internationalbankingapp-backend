@@ -1,131 +1,133 @@
 require('dotenv').config();
+const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
-const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');              
-const ExpressBrute = require('express-brute'); 
+const morgan = require('morgan');
 
 const authRoutes = require('./routes/auth');
 const paymentsRouter = require('./routes/payments');
+const employeesRouter = require('./routes/employees');
+
 const app = express();
 
-const USE_HTTPS = process.env.USE_HTTPS !== 'false';
+// -----------------------------
+// ENVIRONMENT
+// -----------------------------
+const isProduction = process.env.NODE_ENV === 'production';
+const PORT = process.env.PORT || 4000;
+
+const FRONTEND_URL = process.env.FRONTEND_ORIGIN || (isProduction
+  ? 'https://big-5-bank-frontend.onrender.com'
+  : 'http://localhost:5173');
 
 // -----------------------------
 // SECURITY MIDDLEWARES
 // -----------------------------
-//set secure headers, CSP, HSTS, and prevent clickjacking
 app.use(helmet());
-app.use(helmet.hsts({ maxAge: 31536000 }));
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      connectSrc: [
-        "'self'",
-        "https://big-5-bank-frontend.onrender.com",
-        "https://big-5-bank-api-backend.onrender.com"
-      ],
+      connectSrc: ["'self'", FRONTEND_URL],
       imgSrc: ["'self'", "data:"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
-      reportUri: '/api/csp-report'
     },
   })
 );
 app.use(helmet.frameguard({ action: 'deny' }));
 
-//Morgan request logging
+// -----------------------------
+// LOGGING + BODY PARSING
+// -----------------------------
 app.use(morgan('dev'));
-
-//limit body size to prevent large payload attacks
 app.use(express.json({ limit: '10kb' }));
-
-// Dynamic Report-To header (fixes localhost:4000)
-app.use((req, res, next) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const baseUrl = isProduction ? `https://${req.headers.host}` : 'https://localhost:4000';
-  res.setHeader(
-    'Report-To',
-    JSON.stringify([{
-      group: 'csp-endpoint',
-      max_age: 10886400,
-      endpoints: [{ url: `${baseUrl}/api/csp-report` }],
-      include_subdomains: true,
-    }])
-  );
-  next();
-});
+app.use(cookieParser());
 
 // -----------------------------
 // CORS
 // -----------------------------
-//allow requests only from trusted frontend with credentials
-app.use(
-  cors({
-    origin: [
-      'http://localhost:5173',
-      'https://localhost:5173',
-      'https://big-5-bank-frontend.onrender.com'  
-    ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true
+}));
+
 // -----------------------------
 // RATE LIMITING
 // -----------------------------
-//protect against brute-force and DoS attacks
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-});
-app.use(limiter);
+app.use(rateLimit({ windowMs: 15*60*1000, max: 200 }));
 
 // -----------------------------
-// HTTPS REDIRECT (PRODUCTION)
+// CSRF SETUP
 // -----------------------------
-//force HTTPS in production
-if (process.env.NODE_ENV === 'production' && USE_HTTPS) {
-  app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
-      return res.redirect('https://' + req.headers.host + req.url);
-    }
-    next();
-  });
-}
-
-// -----------------------------
-// CSRF PROTECTION
-// -----------------------------
-//use cookie-based CSRF tokens for all sensitive routes
-app.use(cookieParser());
 const csrfProtection = csrf({ cookie: true });
 
-//endpoint to issue CSRF token cookie
-app.get('/api/csrf-token', (req, res) => {
-  const token = req.csrfToken ? req.csrfToken() : 'token';
+// Provide CSRF token for the frontend
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  const token = req.csrfToken();
   res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,
-    secure: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
+    httpOnly: false,          // readable by frontend JS
+    secure: isProduction,     // only secure in prod
+    sameSite: isProduction ? 'None' : 'Lax'
   });
   res.json({ csrfToken: token });
-})
+});
 
-//protect payments routes with CSRF middleware
-app.use('/api/payments', csrfProtection, paymentsRouter);
+// -----------------------------
+// DATABASE CONNECTION
+// -----------------------------
+if (!process.env.MONGO_URI) {
+  console.error('MONGO_URI not set in .env');
+  process.exit(1);
+}
 
-//handle CSRF errors
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => { console.error(err); process.exit(1); });
+
+// -----------------------------
+// ROUTES
+// -----------------------------
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/', (req,res) => res.json({ ok:true, message:'Backend running' }));
+
+// ---------- AUTH ROUTES ----------
+// Only protect POST/PUT/DELETE routes with CSRF
+app.use('/api/auth', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    csrfProtection(req, res, next);
+  } else {
+    next();
+  }
+}, authRoutes);
+
+// ---------- PAYMENTS ROUTES ----------
+app.use('/api/payments', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    csrfProtection(req, res, next);
+  } else {
+    next();
+  }
+}, paymentsRouter);
+
+// ---------- EMPLOYEES ROUTES ----------
+app.use('/api/employees', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    csrfProtection(req, res, next);
+  } else {
+    next();
+  }
+}, employeesRouter);
+
+// -----------------------------
+// CSRF ERROR HANDLER
+// -----------------------------
 app.use((err, req, res, next) => {
   if (err && err.code === 'EBADCSRFTOKEN') {
     return res.status(403).json({ error: 'invalid CSRF token' });
@@ -133,83 +135,6 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// -----------------------------
-// MONGODB CONNECTION
-// -----------------------------
-const MONGO_URI = process.env.MONGO_URI;
-if (!MONGO_URI) {
-  console.error('MONGO_URI not set in .env');
-  process.exit(1);
-}
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
-
-// -----------------------------
-// EXPRESS-BRUTE (login protection)
-// -----------------------------
-const store = new ExpressBrute.MemoryStore();
-
-const bruteforce = new ExpressBrute(store, {
-  freeRetries: 5,
-  minWait: 5 * 60 * 1000,   // 5 minutes
-  maxWait: 60 * 60 * 1000,  // 1 hour
-  lifetime: 60 * 60,        // reset after 1 hour
-
-  //custom response when locked out
-  failCallback: (req, res, next, nextValidRequestDate) => {
-    res.status(429).json({
-      error: 'Too many login attempts. Please try again in 5 minutes.',
-      retryAfter: nextValidRequestDate, // gives the timestamp when they can retry
-    });
-  },
-});
-
-// Apply brute-force protection only to login route
-// NOTE: keep this BEFORE the authRoutes middleware so it runs for /api/auth/login
-app.post('/api/auth/login', bruteforce.prevent, (req, res, next) => {
-  next(); // hand off to your existing auth logic inside authRoutes
-});
-
-// -----------------------------
-// ROUTES
-// -----------------------------
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is healthy' });
-});
-app.use('/api/auth', authRoutes);
-app.use('/api/employees', require('./routes/employees'));
-
-
-app.get('/', (req, res) =>
-  res.json({ ok: true, message: 'INSY7314 backend running' })
-);
-// -----------------------------
-// CSP VIOLATION REPORT ENDPOINT
-// -----------------------------
-app.post(
-  '/api/csp-report',
-  express.json({ type: 'application/csp-report' }),
-  (req, res) => {
-    const report = req.body['csp-report'];
-    if (report) {
-      console.warn('CSP VIOLATION DETECTED:', {
-        time: new Date().toISOString(),
-        documentUri: report['document-uri'],
-        blockedUri: report['blocked-uri'],
-        violatedDirective: report['violated-directive'],
-        sourceFile: report['source-file'],
-        lineNumber: report['line-number'],
-      });
-    }
-    res.status(204).end();
-  }
-);
 // -----------------------------
 // GLOBAL ERROR HANDLER
 // -----------------------------
@@ -219,24 +144,11 @@ app.use((err, req, res, _next) => {
 });
 
 // -----------------------------
-// HPP PROTECTION (parameter pollution)
+// START SERVER
 // -----------------------------
-const hpp = require('hpp');
-app.use(hpp());
-
-// -----------------------------
-// TRUST PROXY
-// -----------------------------
-//safe configuration for reverse proxy and secure cookies
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1); //trust first proxy
+if (isProduction) {
+  app.set('trust proxy', 1);
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 } else {
-  app.set('trust proxy', false);
+  app.listen(PORT, () => console.log(`Dev server running at http://localhost:${PORT}`));
 }
-// -----------------------------
-// START SERVER (Render only)
-// -----------------------------
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
