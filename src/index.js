@@ -24,24 +24,34 @@ const FRONTEND_URL = process.env.FRONTEND_ORIGIN || (isProduction
   ? 'https://big-5-bank-frontend.onrender.com'
   : 'http://localhost:5173');
 
+  // TRUST PROXY - Add this right after environment variables
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
 // -----------------------------
 // SECURITY MIDDLEWARES
 // -----------------------------
-app.use(helmet());
-app.use(
-  helmet.contentSecurityPolicy({
-  directives: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
-    connectSrc: ["'self'", FRONTEND_URL, 'https://big-5-bank-api-backend.onrender.com'],
-    imgSrc: ["'self'", "data:"],
-    styleSrc: ["'self'", "'unsafe-inline'"],
-    objectSrc: ["'none'"],
-    upgradeInsecureRequests: [],
-  },
-})
-
-);
+// 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: [
+        "'self'", 
+        "https://big-5-bank-api-backend.onrender.com",
+        "https://big-5-bank-frontend.onrender.com"
+      ],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  }
+}));
 app.use(helmet.frameguard({ action: 'deny' }));
 
 // -----------------------------
@@ -55,16 +65,30 @@ app.use(cookieParser());
 // CORS
 // -----------------------------
 // 
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://localhost:5173',
-    'https://big-5-bank-frontend.onrender.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Authorization']
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: [
+        "'self'", 
+        "https://big-5-bank-api-backend.onrender.com",
+        "https://big-5-bank-frontend.onrender.com",
+        "http://localhost:4000",  // Add for dev
+        "http://localhost:5173"   // Add for dev
+      ],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  }
 }));
+
+// Handle preflight requests globally
+app.options('*', cors()); // This handles all preflight request
 // -----------------------------
 // RATE LIMITING
 // -----------------------------
@@ -78,11 +102,15 @@ const csrfProtection = csrf({ cookie: true });
 // Provide CSRF token for the frontend
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
+  
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,      // frontend JS can read
-    secure: isProduction, // must be true in prod
-    sameSite: 'None'      // cross-origin cookies
+    secure: true,        // MUST be true for HTTPS (even in production)
+    sameSite: 'none',    // lowercase for cross-origin
+    domain: isProduction ? '.onrender.com' : undefined, // Important for subdomains
+    maxAge: 3600000      // 1 hour expiration
   });
+  
   res.json({ csrfToken: token });
 });
 
