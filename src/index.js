@@ -62,33 +62,30 @@ app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
 // -----------------------------
-// CORS
+// CORS - SIMPLIFIED VERSION
 // -----------------------------
-// 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: [
-        "'self'", 
-        "https://big-5-bank-api-backend.onrender.com",
-        "https://big-5-bank-frontend.onrender.com",
-        "http://localhost:4000",  // Add for dev
-        "http://localhost:5173"   // Add for dev
-      ],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://localhost:5173',
+      'https://big-5-bank-frontend.onrender.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true
 }));
 
-// Handle preflight requests globally
-app.options('*', cors()); // This handles all preflight request
+// Explicitly handle preflight for all routes
+app.options('*', cors());
 // -----------------------------
 // RATE LIMITING
 // -----------------------------
@@ -103,14 +100,20 @@ const csrfProtection = csrf({ cookie: true });
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const token = req.csrfToken();
   
-  res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,      // frontend JS can read
-    secure: true,        // MUST be true for HTTPS (even in production)
-    sameSite: 'none',    // lowercase for cross-origin
-    domain: isProduction ? '.onrender.com' : undefined, // Important for subdomains
-    maxAge: 3600000      // 1 hour expiration
-  });
+  // Remove the domain setting - let the browser handle it
+  const cookieOptions = {
+    httpOnly: false,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 3600000
+  };
   
+  // Only set domain in production if needed, but try without first
+  // if (isProduction) {
+  //   cookieOptions.domain = '.onrender.com';
+  // }
+  
+  res.cookie('XSRF-TOKEN', token, cookieOptions);
   res.json({ csrfToken: token });
 });
 
