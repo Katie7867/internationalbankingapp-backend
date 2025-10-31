@@ -150,14 +150,14 @@ router.post('/login', authLimiter, async (req, res) => {
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: secureFlag,
-      sameSite: 'Strict',
+      sameSite: secureFlag ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: secureFlag,
-      sameSite: 'Strict',
+      sameSite: secureFlag ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -215,13 +215,13 @@ router.post('/refresh', async (req, res) => {
     res.cookie('refresh_token', newRefreshToken, {
       httpOnly: true,
       secure: secureFlag,
-      sameSite: 'Strict',
+      sameSite: secureFlag ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
     res.cookie('access_token', newAccessToken, {
       httpOnly: true,
       secure: secureFlag,
-      sameSite: 'Strict',
+      sameSite: secureFlag ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000
     });
 
@@ -266,8 +266,8 @@ router.post('/logout', async (req, res) => {
       } catch (_err) { /* ignore */ }
     }
     const secureFlag = process.env.NODE_ENV === 'production';
-    res.clearCookie('access_token', { httpOnly: true, secure: secureFlag, sameSite: 'Strict' });
-    res.clearCookie('refresh_token', { httpOnly: true, secure: secureFlag, sameSite: 'Strict' });
+    res.clearCookie('access_token', { httpOnly: true, secure: secureFlag, sameSite: secureFlag ? 'none' : 'lax' });
+    res.clearCookie('refresh_token', { httpOnly: true, secure: secureFlag, sameSite: secureFlag ? 'none' : 'lax' });
     return res.json({ message: 'logged out' });
   } catch (err) {
     console.error(err);
