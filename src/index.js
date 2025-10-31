@@ -96,12 +96,17 @@ const csrfSecrets = new Map();
 // Provide CSRF token endpoint - NO CSRF PROTECTION ON THIS ENDPOINT
 app.get('/api/csrf-token', (req, res) => {
   try {
-    // Generate or retrieve secret for this session
+    // Check if user already has a valid secret
     let secret = req.cookies.csrfSecret;
+    let isNewSecret = false;
     
     if (!secret || !csrfSecrets.has(secret)) {
+      // Generate NEW secret only if none exists
       secret = crypto.randomBytes(32).toString('hex');
       csrfSecrets.set(secret, Date.now());
+      isNewSecret = true;
+      
+      console.log('🔐 Generated NEW CSRF secret:', secret.substring(0, 10) + '...');
       
       // Set cookie with secret
       res.cookie('csrfSecret', secret, {
@@ -111,6 +116,10 @@ app.get('/api/csrf-token', (req, res) => {
         maxAge: 3600000, // 1 hour
         path: '/'
       });
+    } else {
+      // Reuse existing secret - just refresh timestamp
+      csrfSecrets.set(secret, Date.now());
+      console.log('♻️  Reusing existing CSRF secret:', secret.substring(0, 10) + '...');
     }
     
     // Generate token from secret
@@ -118,10 +127,10 @@ app.get('/api/csrf-token', (req, res) => {
       .update('csrf-token')
       .digest('hex');
     
-    console.log('CSRF token generated for session:', secret.substring(0, 10) + '...');
+    console.log(`✅ CSRF token generated (${isNewSecret ? 'NEW' : 'REUSED'} secret):`, token.substring(0, 10) + '...');
     res.json({ csrfToken: token });
   } catch (error) {
-    console.error('Error generating CSRF token:', error);
+    console.error('❌ Error generating CSRF token:', error);
     res.status(500).json({ error: 'Failed to generate CSRF token' });
   }
 });
@@ -132,8 +141,12 @@ const validateCsrf = (req, res, next) => {
     const token = req.headers['x-csrf-token'];
     const secret = req.cookies.csrfSecret;
     
+    console.log('🔍 Validating CSRF token...');
+    console.log('   Token received:', token ? token.substring(0, 10) + '...' : 'NONE');
+    console.log('   Secret cookie:', secret ? secret.substring(0, 10) + '...' : 'NONE');
+    
     if (!token) {
-      console.error('No CSRF token in request');
+      console.error('❌ No CSRF token in request headers');
       return res.status(403).json({ 
         error: 'Invalid CSRF token',
         message: 'No CSRF token provided'
@@ -141,7 +154,8 @@ const validateCsrf = (req, res, next) => {
     }
     
     if (!secret || !csrfSecrets.has(secret)) {
-      console.error('No valid CSRF secret in cookies');
+      console.error('❌ No valid CSRF secret in cookies');
+      console.log('   Available secrets:', Array.from(csrfSecrets.keys()).map(s => s.substring(0, 10) + '...'));
       return res.status(403).json({ 
         error: 'Invalid CSRF token',
         message: 'Session expired. Please refresh the page.'
@@ -153,17 +167,22 @@ const validateCsrf = (req, res, next) => {
       .update('csrf-token')
       .digest('hex');
     
+    console.log('   Expected token:', expectedToken.substring(0, 10) + '...');
+    
     if (token !== expectedToken) {
-      console.error('CSRF token mismatch');
+      console.error('❌ CSRF token mismatch!');
+      console.error('   Got:     ', token.substring(0, 20) + '...');
+      console.error('   Expected:', expectedToken.substring(0, 20) + '...');
       return res.status(403).json({ 
         error: 'Invalid CSRF token',
         message: 'Token verification failed'
       });
     }
     
+    console.log('✅ CSRF token valid!');
     next();
   } catch (error) {
-    console.error('CSRF validation error:', error);
+    console.error('❌ CSRF validation error:', error);
     res.status(403).json({ 
       error: 'Invalid CSRF token',
       message: 'Validation error'
