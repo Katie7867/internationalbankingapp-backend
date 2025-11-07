@@ -24,7 +24,7 @@ This repository contains the **REST API** for the INSY7314 Secure Customer & Emp
 ---
 
 ## 📖 Table of Contents
-1. [Introduction](#introduction)  
+1. [Introduction](-introduction)  
 2. [Purpose](#purpose)  
 3. [Prerequisites](#prerequisites)  
 4. [Installation & Quickstart](#installation--quickstart)  
@@ -35,7 +35,7 @@ This repository contains the **REST API** for the INSY7314 Secure Customer & Emp
 9. [Security Implementation](#security-implementation)  
 10. [Attack Protection Details](#attack-protection-details)  
 11. [Input Validation (RegEx Whitelisting)](#input-validation-regex-whitelisting)  
-12. [Testing](#testing)  
+12. [Testing](-testing)  
 13. [DevSecOps Pipeline](#devsecops-pipeline)  
 14. [Project Structure](#project-structure)  
 15. [Seeding Employee Accounts](#seeding-employee-accounts)  
