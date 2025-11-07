@@ -9,7 +9,7 @@
 **Security:** HTTPS/TLS, JWT (15min + refresh), bcrypt (12 rounds), Helmet, CSRF, Rate Limiting, Brute-Force Protection, Input Whitelisting (RegEx), CORS, XSS/Injection Prevention  
 **CI/CD:** CircleCI → SonarQube + Jest + Coverage | Docker + docker-compose
 
-This repository contains the **REST API** for the INSY7314 Secure Customer & Employee International Payments Portal. It exposes endpoints for **authentication**, **customer payments**, and **employee verification**, implementing comprehensive security controls required by the **INSY7314 POE Tasks 2 & 3**.
+This repository contains the **REST API** for the INSY7314 Secure Customer & Employee International Payments Portal. It exposes endpoints for **authentication**, **customer payments**, and **employee verification**, implementing comprehensive security controls required by the **INSY7314 POE Task**.
 
 ---
 
@@ -55,7 +55,7 @@ Deliver a **secure, auditable, enterprise-ready** backend that:
 -  **Whitelists all inputs** using strict RegEx patterns
 -  Serves traffic over **HTTPS/TLS** with HSTS headers
 -  Prevents **10+ attack vectors**: CSRF, XSS, SQL/NoSQL Injection, Session Hijacking, Clickjacking, MITM, DDoS, Brute Force
--  Provides **role-based access control** (Customer vs Employee)
+-  Provides **role-based access control** (Customer vs Employee vs Admin)
 -  Includes **comprehensive error handling** and security logging
 
 ---
@@ -96,7 +96,7 @@ npm run generate-ssl
 cp .env.example .env
 # Edit .env with your MongoDB URI and secrets
 
-# 5) Seed employee accounts (Task 3 requirement)
+# 5) Seed employee accounts 
 npm run seed
 
 # 6) Start development server with HTTPS
@@ -121,7 +121,7 @@ PORT=4000
 # ============================================
 # DATABASE
 # ============================================
-MONGODB_URI=mongodb://localhost:27017/insy7314_payments
+
 # For MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/insy7314?retryWrites=true&w=majority
 
