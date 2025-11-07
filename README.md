@@ -795,7 +795,7 @@ Part 3 evolved into a *full-stack system* with employee and admin portals, stron
    
 ## 🎥 Demo Video
 
-[Watch the Demo on YouTube](https://youtu.be/eC-iYNzju1s)
+[Watch the Demo on YouTube](https://youtu.be/lEMtuhyEzMY)
 
 <p align="center">
 
