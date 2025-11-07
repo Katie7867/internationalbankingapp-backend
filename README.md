@@ -250,6 +250,7 @@ npm run seed
 |--------|----------|-------------|---------------|------|
 | GET | `/me` | Get current user info | ✅ | Any |
 | POST | `/logout` | Logout and invalidate tokens | ✅ | Any |
+| POST | `/register` | Register new user |  | Any |
 
 ### Customer Payment Routes (`/api/payments`)
 
