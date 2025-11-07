@@ -11,8 +11,6 @@
 
 This repository contains the **REST API** for the INSY7314 Secure Customer & Employee International Payments Portal. It exposes endpoints for **authentication**, **customer payments**, and **employee verification**, implementing comprehensive security controls required by the **INSY7314 POE Task**.
 
----
-
 ## 👥 Group: The Bankrupt Bunch
 
 | Name | Student Number |
@@ -23,28 +21,33 @@ This repository contains the **REST API** for the INSY7314 Secure Customer & Emp
 | **Matthew Pierce Mason** | ST10403514 |
 | **Tiffany Noeleen Mather** | ST10249863 |
 
+---
+
 ## 📖 Table of Contents
-1. [Introduction](#-introduction)  
-2. [Purpose](#-purpose)  
-3. [Prerequisites](#-prerequisites)  
-4. [Installation & Quickstart](#-installation--quickstart)  
-5. [Environment Configuration (.env)](#-environment-configuration-env)  
-6. [SSL/TLS Setup](#-ssltls-setup)  
-7. [Running the Application](#-running-the-application)  
-8. [API Endpoints](#-api-endpoints)  
-9. [Security Implementation](#-security-implementation)  
-10. [Attack Protection Details](#-attack-protection-details)  
-11. [Input Validation (RegEx Whitelisting)](#-input-validation-regex-whitelisting)  
-12. [Testing](#-testing)  
-13. [DevSecOps Pipeline](#-devsecops-pipeline)  
-14. [Project Structure](#-project-structure)  
-15. [Seeding Employee Accounts](#-seeding-employee-accounts)  
-16. [Docker Deployment](#-docker-deployment)  
-17. [Troubleshooting](#-troubleshooting)  
-18. [POE Compliance Checklist](#-poe-compliance-checklist)  
-19. [License & Credits](#-license--credits)
-20. [Repository Links](#-repository-links)  
-21. [Demo Video](#-demo-video)  
+1. [Introduction](#introduction)  
+2. [Purpose](#purpose)  
+3. [Prerequisites](#prerequisites)  
+4. [Installation & Quickstart](#installation--quickstart)  
+5. [Environment Configuration (.env)](#environment-configuration-env)  
+6. [SSL/TLS Setup](#ssltls-setup)  
+7. [Running the Application](#running-the-application)  
+8. [API Endpoints](#api-endpoints)  
+9. [Security Implementation](#security-implementation)  
+10. [Attack Protection Details](#attack-protection-details)  
+11. [Input Validation (RegEx Whitelisting)](#input-validation-regex-whitelisting)  
+12. [Testing](#testing)  
+13. [DevSecOps Pipeline](#devsecops-pipeline)  
+14. [Project Structure](#project-structure)  
+15. [Seeding Employee Accounts](#seeding-employee-accounts)  
+16. [Docker Deployment](#docker-deployment)  
+17. [Troubleshooting](#troubleshooting)  
+18. [POE Compliance Checklist](#poe-compliance-checklist)  
+19. [Sample Requests](#sample-requests)  
+20. [Repository Links](#repository-links)  
+21. [Changelog — Part 2 → Part 3 Improvements](#changelog--part-2--part-3-improvements)  
+22. [Demo Video](#demo-video)  
+23. [License & Credits](#license--credits)  
+24. [Support](#support)
 
 ---
 
@@ -54,13 +57,13 @@ A production-grade, security-hardened banking API that enables:
 - **International SWIFT Payment Creation** with comprehensive validation
 - **Employee Portal** for payment verification and approval
 - **Token-based authentication** with automatic refresh mechanism
-- **Complete protection** against OWASP Top 10 vulnerabilities
+- **Complete protection** against attacks (clickjacking, DDoS, MITM, etc.)
 
 ---
 
 ## 🎯 Purpose
 Deliver a **secure, auditable, enterprise-ready** backend that:
--  Enforces **bcrypt password hashing with 12 salt rounds**
+-  Enforces **bcrypt password hashing with 12 salt rounds** and **pepper**
 -  Implements **short-lived JWTs (15min)** with **refresh token rotation**
 -  **Whitelists all inputs** using strict RegEx patterns
 -  Serves traffic over **HTTPS/TLS** with HSTS headers
@@ -186,7 +189,6 @@ LOG_LEVEL=info
 > **⚠️ CRITICAL:** Never commit `.env` to version control. Add it to `.gitignore`.
 
 ---
----
 <p align="center">
   
   <img src="https://media4.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/RDZo7znAdn2u7sAcWH/giphy.gif" alt="shield GIF"/>
@@ -207,12 +209,8 @@ openssl req -x509 -newkey rsa:4096 -keyout ssl/server.key -out ssl/server.cert -
 
 ### For Production
 
-Use **Let's Encrypt** or your organization's CA-signed certificates:
+Use **Render** CA-signed certificates
 
-```bash
-# Place your production certificates
-cp /path/to/production/privkey.pem ssl/server.key
-cp /path/to/production/fullchain.pem ssl/server.cert
 ```
 
 ### Trust Self-Signed Certificate (Development)
@@ -469,11 +467,12 @@ tests/
 └── setup.js
 ```
 
----
+
 <p align="center">
   
   <img src="https://media2.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bKj0qEKTVBdF2o5Dgn/giphy.gif" alt=" Access denied GIF"/>
 </p>
+
 ---
 
 ## 🔁 DevSecOps Pipeline
@@ -546,20 +545,6 @@ backend/
 
 **Task 3 Requirement:** Employee accounts must be pre-created (no registration).
 
-```bash
-# Seed default employee accounts
-npm run seed
-
-# This creates:
-# Username: employee1
-# Account: 9999999991
-# Password: Employee@123
-
-# Username: employee2
-# Account: 9999999992
-# Password: Employee@123
-```
-
 ### Manual Employee Creation
 ```javascript
 // src/seed/seedEmployee.js
@@ -567,8 +552,9 @@ const employees = [
   {
     fullName: 'John Employee',
     idNumber: '9999999999991',
-    accountNumber: '9999999991',
-    password: 'Employee@123',
+    accountNumber: '123456123456',
+    Username: 'testemployee',
+    password: 'Test@123',
     role: 'employee'
   }
 ];
@@ -726,6 +712,71 @@ curl -k -X PUT https://localhost:4000/api/payments/PAYMENT_ID/verify \
   -H "Authorization: Bearer EMPLOYEE_ACCESS_TOKEN" \
   -H "X-CSRF-Token: YOUR_CSRF_TOKEN"
 ```
+---
+
+## 🔗 Repository Links
+
+Backend (API) (this repo):
+```
+https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather.git
+```
+Forked Backend:
+```
+https://github.com/ST10403514/BACKEND---insy7314-poe-part-2-ST10249863-TiffanyMather
+```
+Deployed Backend:
+```
+https://big-5-bank-api-backend.onrender.com/ 
+```
+Frontend:
+```
+https://github.com/VCDN-2025/insy7314-poe-part-3-ST10249863-TiffanyMather.git
+```
+Forked Frontend:
+```
+https://github.com/ST10403514/FRONTEND---insy7314-poe-part-3-ST10249863-TiffanyMather
+```
+Deployed Frontend:
+```
+https://big-5-bank-frontend.onrender.com/login 
+```
+
+---
+
+## 🧾 Changelog — Part 2 → Part 3 Improvements
+
+| *Area* | *Part 2 (Backend – Customer Focus)* | *Part 3 (Full Stack – Employee & Admin Focus)* |
+|-----------|----------------------------------------|--------------------------------------------------|
+| *User Roles* | Focused only on *Customer authentication and payments* | Introduced *Employee* and *Admin* portals with dedicated dashboards and verification workflows. |
+| *Security Layer* | Implemented *bcrypt* hashing, *rate-limiting, **JWT rotation, and **HttpOnly cookies* | Enhanced with *CSP, **HPP, **CSRF helper, **DOMPurify, **Zod, and frontend **regex whitelisting* for layered validation. |
+| *Input Validation* | Backend-only validation using *Joi, **currency-codes, and **express-mongo-sanitize* | Expanded to include *client-side Zod, **DOMPurify, and **regex validation* across all forms. |
+| *Password Policy* | Used *bcrypt (12 salt rounds)* and strong password regex | Retained same backend protection, plus added *zxcvbn, **pepper, and **refresh token* management. |
+| *Transport Security* | Enforced *HTTPS* and *HSTS* via Helmet with local TLS certificates | Added *Vite HTTPS dev server* and *SSL* through Render deployment. |
+| *XSS / Clickjacking* | Protected using *Helmet CSP* and *frameguard deny* | Added *CSP via crypto, **Referrer Policy, and **Permissions Policy* in index.html; sanitized JSX output using *DOMPurify*. |
+| *CSRF Protection* | Supported *token-based header (XSRF-TOKEN)* | Integrated *Axios CSRF helper*, withCredentials, and automatic *token injection* for secure requests. |
+| *Session & Token Handling* | Used *JWT rotation* with refresh IDs stored in the database | Tokens now stored in *memory/session* instead of localStorage to prevent persistence. |
+| *Input Sanitization* | Applied *xss-clean* and *express-mongo-sanitize* | Added *sanitize.safe()* utility to strip zero-width and control characters client-side. |
+| *DDoS / Brute Force* | Implemented *express-rate-limit, **express-brute, and payload caps | Retained backend defenses and added **frontend debounce controls* to prevent accidental repeated requests. |
+| *Logging & Auditing* | Added *morgan* for structured server logs | Extended with a *frontend error monitoring hook* for client-side visibility. |
+| *DevSecOps / Pipeline* | Local testing and manual *SonarQube* analysis | Upgraded to full *CI/CD pipeline* (CircleCI / GitHub Actions) with linting, unit tests, Newman/API tests, Snyk vulnerability scan, and automated deployment to *Render/Vercel*. |
+| *Deployment* | Hosted only on *local Node.js server* | Deployed *API and Frontend* with *Docker containers* to free cloud hosting (*Render*). |
+
+✅ *Summary:*  
+Part 2 focused on a *secure backend* for customer authentication and payments.  
+Part 3 evolved into a *full-stack system* with employee and admin portals, stronger frontend security, automated pipelines, and secure cloud deployment — meeting all *INSY7314 POE* criteria.
+
+---
+
+## 🎥 Demo Video
+**Part 2**
+[Watch the Demo on YouTube](https://youtu.be/lEMtuhyEzMY)
+
+**Part 3**
+[Watch the Demo on YouTube](https://youtu.be/lEMtuhyEzMY)
+<p align="center">
+
+  <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sRFEa8lbeC7zbcIZZR/giphy-downsized-medium.gif" width="380" alt=" Bank GIF"/>
+</p>
 
 ---
 
@@ -758,49 +809,6 @@ For issues or questions:
 2. Review [API Endpoints](#-api-endpoints)
 3. Open an issue on GitHub
 4. Contact: tiffany.mather@student.vc.edu
-
----
----
-
-## 🔗 Repository Links
-
-```
-Frontend (this repo): https://github.com/VCDN-2025/insy7314-poe-part-3-ST10249863-TiffanyMather.git
-Backend (API):        https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather.git
-```
-
-## 🧾 Changelog — Part 2 → Part 3 Improvements
-
-| *Area* | *Part 2 (Backend – Customer Focus)* | *Part 3 (Full Stack – Employee & Admin Focus)* |
-|-----------|----------------------------------------|--------------------------------------------------|
-| *User Roles* | Focused only on *Customer authentication and payments* | Introduced *Employee* and *Admin* portals with dedicated dashboards and verification workflows. |
-| *Security Layer* | Implemented *bcrypt* hashing, *rate-limiting, **JWT rotation, and **HttpOnly cookies* | Enhanced with *CSP, **HPP, **CSRF helper, **DOMPurify, **Zod, and frontend **regex whitelisting* for layered validation. |
-| *Input Validation* | Backend-only validation using *Joi, **currency-codes, and **express-mongo-sanitize* | Expanded to include *client-side Zod, **DOMPurify, and **regex validation* across all forms. |
-| *Password Policy* | Used *bcrypt (12 salt rounds)* and strong password regex | Retained same backend protection, plus added *zxcvbn, **pepper, and **refresh token* management. |
-| *Transport Security* | Enforced *HTTPS* and *HSTS* via Helmet with local TLS certificates | Added *Vite HTTPS dev server* and *SSL* through Render deployment. |
-| *XSS / Clickjacking* | Protected using *Helmet CSP* and *frameguard deny* | Added *CSP via crypto, **Referrer Policy, and **Permissions Policy* in index.html; sanitized JSX output using *DOMPurify*. |
-| *CSRF Protection* | Supported *token-based header (XSRF-TOKEN)* | Integrated *Axios CSRF helper*, withCredentials, and automatic *token injection* for secure requests. |
-| *Session & Token Handling* | Used *JWT rotation* with refresh IDs stored in the database | Tokens now stored in *memory/session* instead of localStorage to prevent persistence. |
-| *Input Sanitization* | Applied *xss-clean* and *express-mongo-sanitize* | Added *sanitize.safe()* utility to strip zero-width and control characters client-side. |
-| *DDoS / Brute Force* | Implemented *express-rate-limit, **express-brute, and payload caps | Retained backend defenses and added **frontend debounce controls* to prevent accidental repeated requests. |
-| *Logging & Auditing* | Added *morgan* for structured server logs | Extended with a *frontend error monitoring hook* for client-side visibility. |
-| *DevSecOps / Pipeline* | Local testing and manual *SonarQube* analysis | Upgraded to full *CI/CD pipeline* (CircleCI / GitHub Actions) with linting, unit tests, Newman/API tests, Snyk vulnerability scan, and automated deployment to *Render/Vercel*. |
-| *Deployment* | Hosted only on *local Node.js server* | Deployed *API and Frontend* with *Docker containers* to free cloud hosting (*Render*). |
-
----
-
-✅ *Summary:*  
-Part 2 focused on a *secure backend* for customer authentication and payments.  
-Part 3 evolved into a *full-stack system* with employee and admin portals, stronger frontend security, automated pipelines, and secure cloud deployment — meeting all *INSY7314 POE* criteria.
-   
-## 🎥 Demo Video
-
-[Watch the Demo on YouTube](https://youtu.be/lEMtuhyEzMY)
-
-<p align="center">
-
-  <img src="https://media1.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/sRFEa8lbeC7zbcIZZR/giphy-downsized-medium.gif" width="380" alt=" Bank GIF"/>
-</p>
 
 ---
 
