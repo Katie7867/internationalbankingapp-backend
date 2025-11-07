@@ -73,7 +73,7 @@ Deliver a **secure, auditable, enterprise-ready** backend that:
   
   <img src="https://media0.giphy.com/media/v1.Y2lkPWFkZWE2ZTUyYzc5c2MxcXFpc2NqeGI4c2hjNXB4bGF2YmozdGFnOHdjb3JtMWRjeiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/077i6AULCXc0FKTj9s/giphy.gif" width="250" alt="wallet GIF"/>
 </p>
----
+
 
 ## 🧰 Prerequisites
 
