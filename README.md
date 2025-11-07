@@ -788,8 +788,11 @@ Backend (API):        https://github.com/VCDN-2025/insy7314-poe-part-2-ST1024986
 | *Deployment* | Hosted only on *local Node.js server* | Deployed *API and Frontend* with *Docker containers* to free cloud hosting (*Render*). |
 
 ---
----
 
+✅ *Summary:*  
+Part 2 focused on a *secure backend* for customer authentication and payments.  
+Part 3 evolved into a *full-stack system* with employee and admin portals, stronger frontend security, automated pipelines, and secure cloud deployment — meeting all *INSY7314 POE* criteria.
+   
 ## 🎥 Demo Video
 
 [Watch the Demo on YouTube](https://youtu.be/eC-iYNzju1s)
