@@ -4,6 +4,15 @@
 
 # 🛡️ INSY7314 — Secure International Payments API (Backend)
 
+**Bank:** Big 5 Bank  
+**Tech:** Node.js · Express · MongoDB (Mongoose)  
+**Security:** HTTPS/TLS, JWT (15min + refresh), bcrypt (12 rounds), Helmet, CSRF, Rate Limiting, Brute-Force Protection, Input Whitelisting (RegEx), CORS, XSS/Injection Prevention  
+**CI/CD:** CircleCI → SonarQube + Jest + Coverage | Docker + docker-compose
+
+This repository contains the **REST API** for the INSY7314 Secure Customer & Employee International Payments Portal. It exposes endpoints for **authentication**, **customer payments**, and **employee verification**, implementing comprehensive security controls required by the **INSY7314 POE Task**.
+
+---
+
 ## 👥 Group: The Bankrupt Bunch
 
 | Name | Student Number |
@@ -13,15 +22,6 @@
 | **Khatija Moosa Amod** | ST10258766 |
 | **Matthew Pierce Mason** | ST10403514 |
 | **Tiffany Noeleen Mather** | ST10249863 |
-
-**Bank:** Big 5 Bank  
-**Tech:** Node.js · Express · MongoDB (Mongoose)  
-**Security:** HTTPS/TLS, JWT (15min + refresh), bcrypt (12 rounds), Helmet, CSRF, Rate Limiting, Brute-Force Protection, Input Whitelisting (RegEx), CORS, XSS/Injection Prevention  
-**CI/CD:** CircleCI → SonarQube + Jest + Coverage | Docker + docker-compose
-
-This repository contains the **REST API** for the INSY7314 Secure Customer & Employee International Payments Portal. It exposes endpoints for **authentication**, **customer payments**, and **employee verification**, implementing comprehensive security controls required by the **INSY7314 POE Task**.
-
----
 
 ## 📖 Table of Contents
 1. [Introduction](#-introduction)  
@@ -769,6 +769,25 @@ Frontend (this repo): https://github.com/VCDN-2025/insy7314-poe-part-3-ST1024986
 Backend (API):        https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather.git
 ```
 
+## 🧾 Changelog — Part 2 → Part 3 Improvements
+
+| *Area* | *Part 2 (Backend – Customer Focus)* | *Part 3 (Full Stack – Employee & Admin Focus)* |
+|-----------|----------------------------------------|--------------------------------------------------|
+| *User Roles* | Focused only on *Customer authentication and payments* | Introduced *Employee* and *Admin* portals with dedicated dashboards and verification workflows. |
+| *Security Layer* | Implemented *bcrypt* hashing, *rate-limiting, **JWT rotation, and **HttpOnly cookies* | Enhanced with *CSP, **HPP, **CSRF helper, **DOMPurify, **Zod, and frontend **regex whitelisting* for layered validation. |
+| *Input Validation* | Backend-only validation using *Joi, **currency-codes, and **express-mongo-sanitize* | Expanded to include *client-side Zod, **DOMPurify, and **regex validation* across all forms. |
+| *Password Policy* | Used *bcrypt (12 salt rounds)* and strong password regex | Retained same backend protection, plus added *zxcvbn, **pepper, and **refresh token* management. |
+| *Transport Security* | Enforced *HTTPS* and *HSTS* via Helmet with local TLS certificates | Added *Vite HTTPS dev server* and *SSL* through Render deployment. |
+| *XSS / Clickjacking* | Protected using *Helmet CSP* and *frameguard deny* | Added *CSP via crypto, **Referrer Policy, and **Permissions Policy* in index.html; sanitized JSX output using *DOMPurify*. |
+| *CSRF Protection* | Supported *token-based header (XSRF-TOKEN)* | Integrated *Axios CSRF helper*, withCredentials, and automatic *token injection* for secure requests. |
+| *Session & Token Handling* | Used *JWT rotation* with refresh IDs stored in the database | Tokens now stored in *memory/session* instead of localStorage to prevent persistence. |
+| *Input Sanitization* | Applied *xss-clean* and *express-mongo-sanitize* | Added *sanitize.safe()* utility to strip zero-width and control characters client-side. |
+| *DDoS / Brute Force* | Implemented *express-rate-limit, **express-brute, and payload caps | Retained backend defenses and added **frontend debounce controls* to prevent accidental repeated requests. |
+| *Logging & Auditing* | Added *morgan* for structured server logs | Extended with a *frontend error monitoring hook* for client-side visibility. |
+| *DevSecOps / Pipeline* | Local testing and manual *SonarQube* analysis | Upgraded to full *CI/CD pipeline* (CircleCI / GitHub Actions) with linting, unit tests, Newman/API tests, Snyk vulnerability scan, and automated deployment to *Render/Vercel*. |
+| *Deployment* | Hosted only on *local Node.js server* | Deployed *API and Frontend* with *Docker containers* to free cloud hosting (*Render*). |
+
+---
 ---
 
 ## 🎥 Demo Video
