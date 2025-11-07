@@ -4,6 +4,16 @@
 
 # 🛡️ INSY7314 — Secure International Payments API (Backend)
 
+## 👥 Group: The Bankrupt Bunch
+
+| Name | Student Number |
+|------|----------------|
+| **Aisha Bilal Jakhura** | ST10268917 |
+| **Ibrahim Ghogawala** | ST10286968 |
+| **Khatija Moosa Amod** | ST10258766 |
+| **Matthew Pierce Mason** | ST10403514 |
+| **Tiffany Noeleen Mather** | ST10249863 |
+
 **Bank:** Big 5 Bank  
 **Tech:** Node.js · Express · MongoDB (Mongoose)  
 **Security:** HTTPS/TLS, JWT (15min + refresh), bcrypt (12 rounds), Helmet, CSRF, Rate Limiting, Brute-Force Protection, Input Whitelisting (RegEx), CORS, XSS/Injection Prevention  
@@ -251,6 +261,7 @@ npm run seed
 | GET | `/me` | Get current user info | ✅ | Any |
 | POST | `/logout` | Logout and invalidate tokens | ✅ | Any |
 | POST | `/register` | Register new user |  | Any |
+| POST | `/login` | Login existing user |  | Any |
 
 ### Customer Payment Routes (`/api/payments`)
 
@@ -719,8 +730,6 @@ curl -k -X PUT https://localhost:4000/api/payments/PAYMENT_ID/verify \
 ---
 
 ## 📜 License & Credits
-
-**License:** MIT License
 
 **Built by:** The Bankrupt Bunch  
 **Course:** INSY7314 - Secure Software Development  
