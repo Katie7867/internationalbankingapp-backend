@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather/blob/main/Big5_Bank_logo.png" width="220" alt="Big 5 Bank Logo"/>
+  <img src="https://github.com/Katie7867/internationalbankingapp-backend/blob/main/Big5_Bank_logo.png" width="220" alt="Big 5 Bank Logo"/>
 </p>
 
 # 🛡️ INSY7314 — Secure International Payments API (Backend)
@@ -13,14 +13,7 @@ This repository contains the **REST API** for the INSY7314 Secure Customer & Emp
 
 ## 👥 Group: The Bankrupt Bunch
 
-| Name | Student Number |
-|------|----------------|
-| **Aisha Bilal Jakhura** | ST10268917 |
-| **Ibrahim Ghogawala** | ST10286968 |
-| **Khatija Moosa Amod** | ST10258766 |
-| **Matthew Pierce Mason** | ST10403514 |
-| **Tiffany Noeleen Mather** | ST10249863 |
-
+Please note this was a group project and due to secuirty reasons i removed their names and student numbers
 ---
 
 ## 📖 Table of Contents
@@ -718,11 +711,7 @@ curl -k -X PUT https://localhost:4000/api/payments/PAYMENT_ID/verify \
 
 Backend (API) (this repo):
 ```
-https://github.com/VCDN-2025/insy7314-poe-part-2-ST10249863-TiffanyMather.git
-```
-Forked Backend:
-```
-https://github.com/ST10403514/BACKEND---insy7314-poe-part-2-ST10249863-TiffanyMather
+https://github.com/Katie7867/internationalbankingapp-backend.git
 ```
 Deployed Backend:
 ```
@@ -730,11 +719,7 @@ https://big-5-bank-api-backend.onrender.com/
 ```
 Frontend:
 ```
-https://github.com/VCDN-2025/insy7314-poe-part-3-ST10249863-TiffanyMather.git
-```
-Forked Frontend:
-```
-https://github.com/ST10403514/FRONTEND---insy7314-poe-part-3-ST10249863-TiffanyMather
+https://github.com/Katie7867/internationalbankingapp-frontend.git
 ```
 Deployed Frontend:
 ```
